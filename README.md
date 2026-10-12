@@ -30,6 +30,12 @@ uv run --locked --extra test pytest
 python3 scripts/check_delivery.py
 ```
 
+## Protected backend
+
+A separate PostgreSQL API now implements instructor-scoped terms, courses, sections and opaque
+enrollments, with signed-token/MFA verification and row-level security. Database integration
+qualification is pending; real student processing remains held. See [setup and API](docs/protected-backend.md).
+
 ## Delivery
 
 - [Approved implementation plan](.codex/plans/2026-10-12-context-aware-essay-evaluation.md)

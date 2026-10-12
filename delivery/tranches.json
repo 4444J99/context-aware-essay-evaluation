@@ -60,7 +60,7 @@
       "depends_on": [
         "P0"
       ],
-      "status": "planned",
+      "status": "in_progress",
       "tranches": [
         {
           "id": "T1.1",
@@ -69,9 +69,10 @@
           "depends_on": [
             "T0.3"
           ],
-          "status": "planned",
+          "status": "in_progress",
           "acceptance": "Instructor, term, course, section and enrollment models survive migrate/rollback tests; cross-scope access is denied. Legacy course/realm, assignment/quest and submission references are scoped mappings; client IDs or roles grant no authority.",
-          "source_review": "docs/legacy-review.md"
+          "source_review": "docs/legacy-review.md",
+          "implementation_pr": "https://github.com/4444J99/context-aware-essay-evaluation/pull/9"
         },
         {
           "id": "T1.2",

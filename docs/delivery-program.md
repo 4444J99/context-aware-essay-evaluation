@@ -1,7 +1,7 @@
 # edu essay evaluation delivery program
 
 Date: 2026-10-12. Product owner: edu. Engineering and delivery owner: Codex in this project.
-Status: first implementation tranche in progress; no production release or real student processing.
+Status: protected backend T1.1 in progress; no production release or real student processing.
 
 ## Product boundary and source of truth
 
@@ -119,7 +119,9 @@ the approved Next.js workspace remains T2.3. Ephemeral local encryption validate
 it does not satisfy hosted KMS, durable vault, authentication, or restoration acceptance.
 Regular expressions do not satisfy contextual de-identification. No AI evaluation is claimed.
 
-The next implementation sequence is T1.1 schema/authorization, T1.2 identity/vault, then T1.3
+The active implementation is T1.1 schema/authorization with PostgreSQL/RLS and API token verification.
+Database integration qualification is pending; see [protected backend](protected-backend.md).
+The following sequence is T1.2 identity/vault, then T1.3
 staging. Work on synthetic fixtures remains possible while permitted student-processing
 configuration is being resolved. Repository structure is apps/web, services/api,
 workers, companion, and shared contracts as those components are introduced; the initial

@@ -1,5 +1,15 @@
 # Decisions
 
+## 2026-10-12 previous versions supplied by the user
+
+The Teacher Dashboard React artifact and 4444J99/classroom-rpg-aetheria are predecessor
+inputs for this edu component. Preserve their teaching workflows and adapt reusable React
+views to the protected evaluator service. Keep the approved Next.js target and Python core;
+Aetheria is a potential additional client, not an instruction to add RPG features to the pilot.
+Pin source evidence in delivery/sources.json and docs/legacy-review.md. Preserve the original
+approved plan; the v2 addendum records the integration sequence and explicit rubric differences.
+No source application was modified, executed, or connected to student data in this review.
+
 ## 2026-10-12 edu ownership
 
 Human clarification: "it is a part of edu--for sure, just for clarity".

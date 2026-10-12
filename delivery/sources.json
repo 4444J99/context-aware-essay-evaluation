@@ -1,0 +1,58 @@
+{
+  "schema_version": 1,
+  "product": "edu",
+  "reviewed_on": "2026-10-12",
+  "relationship": "User identified both artifacts as previous versions; no Git ancestry claim between artifacts.",
+  "review_document": "docs/legacy-review.md",
+  "artifacts": [
+    {
+      "id": "teacher-dashboard-react",
+      "kind": "user_supplied_file",
+      "filename": "teacher_dashboard_application.react_Teacher Dashboard Application_teacher-dashboard",
+      "sha256": "dc73fc4aa979d87174d26804755cf8927f181906440a156419cc4239cff58ad8",
+      "bytes": 51003,
+      "lines": 947,
+      "custody": "Original user file unchanged; reviewed in place, not copied or executed.",
+      "rubric_shapes": [
+        "teacher_dashboard_levels"
+      ],
+      "owner_tranches": [
+        "T1.1",
+        "T2.1",
+        "T2.3",
+        "T3.1",
+        "T3.2",
+        "T3.3",
+        "T4.1",
+        "T4.2"
+      ]
+    },
+    {
+      "id": "classroom-rpg-aetheria",
+      "kind": "github_repository",
+      "repository": "4444J99/classroom-rpg-aetheria",
+      "visibility": "private",
+      "branch": "main",
+      "commit": "584e8ac0a7df50a47d39924f4bd116f7f331cbe2",
+      "url": "https://github.com/4444J99/classroom-rpg-aetheria/tree/584e8ac0a7df50a47d39924f4bd116f7f331cbe2",
+      "license_file": "LICENSE",
+      "license_observed": "MIT; Copyright GitHub, Inc.",
+      "custody": "Read-only remote source inspection at the pinned commit; no code copied or runtime data accessed.",
+      "rubric_shapes": [
+        "aetheria_max_points",
+        "aetheria_weighted_levels"
+      ],
+      "owner_tranches": [
+        "T1.1",
+        "T2.3",
+        "T3.1",
+        "T3.2",
+        "T3.3",
+        "T4.2",
+        "T5.1"
+      ]
+    }
+  ],
+  "integration_status": "planned",
+  "verification_scope": "Source inspection and provenance only; no predecessor build, typecheck, test suite, deployed-service audit or new runtime integration."
+}

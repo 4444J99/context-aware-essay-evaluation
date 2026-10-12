@@ -33,6 +33,8 @@ python3 scripts/check_delivery.py
 ## Delivery
 
 - [Approved implementation plan](.codex/plans/2026-10-12-context-aware-essay-evaluation.md)
+- [Previous-version integration addendum](.codex/plans/2026-10-12-context-aware-essay-evaluation-v2.md)
+- [Teacher Dashboard and Aetheria review](docs/legacy-review.md)
 - [Phases, tranches, sequence and acceptance](docs/delivery-program.md)
 - [Machine-readable dependency graph](delivery/tranches.json)
 - [Decisions and edu ownership](docs/decisions.md)

@@ -17,6 +17,14 @@ The user's clarification that this is part of edu is recorded in
 [the decision log](decisions.md). This program adds delivery order, responsibilities and executable
 acceptance; it does not replace or reduce the approved scope.
 
+The user subsequently supplied the Teacher Dashboard React artifact and classroom-rpg-aetheria
+as previous versions. Their [source review](legacy-review.md) and
+[v2 integration addendum](../.codex/plans/2026-10-12-context-aware-essay-evaluation-v2.md)
+add reuse requirements to the existing tranches. The evaluator remains a shared edu service;
+adapted React instructor views and a future Aetheria client use the same protected contracts.
+Source similarity does not count as implemented integration. delivery/tranches.json records
+the expanded acceptance, including rubric compatibility, reflection, snippets and full coverage.
+
 ## Milestones and tranches
 
 ### P0 Program and executable foundation
@@ -35,7 +43,7 @@ Entry: P0 accepted.
 
 | Tranche | Deliverable | Accountable role | Acceptance |
 | --- | --- | --- | --- |
-| T1.1 | PostgreSQL schema, migrations and scoped authorization | Platform engineering | Instructor, term, course, section and enrollment models survive migrate/rollback tests; cross-scope access is denied. |
+| T1.1 | PostgreSQL schema, migrations and scoped authorization | Platform engineering | Instructor, term, course, section and enrollment models survive migrate/rollback tests; cross-scope access is denied. Legacy course/realm, assignment/quest and submission references are scoped mappings; client IDs or roles grant no authority. |
 | T1.2 | OIDC MFA, object vault and separate identity keys | Security engineering | Private login works; content worker cannot decrypt identity; backup restore is demonstrated. |
 | T1.3 | Hosted staging, secrets and operational controls | Platform engineering | Synthetic staging smoke passes; budgets, logs, key rotation and rollback have executable checks. |
 
@@ -45,9 +53,9 @@ Entry: P1 accepted.
 
 | Tranche | Deliverable | Accountable role | Acceptance |
 | --- | --- | --- | --- |
-| T2.1 | DOCX PDF TXT ZIP and roster ingestion | Application engineering | Bounded extraction preserves text and paragraph order; scanned, malformed, zip-bomb and ambiguous roster cases hold. |
+| T2.1 | DOCX PDF TXT ZIP and roster ingestion | Application engineering | Bounded extraction preserves text and paragraph order; scanned, malformed, zip-bomb and ambiguous roster cases hold. Legacy import dry runs report exact source, imported, duplicate and held counts without writing historical student records. |
 | T2.2 | Contextual de-identification and passage mapping | Privacy engineering | Direct identifiers and contextual disclosures tested; uncertain cases hold; original passage mapping survives redactions. |
-| T2.3 | Next.js intake workspace and exception resolution | Product engineering | Instructor imports a whole synthetic class and resolves mismatches without cross-student disclosure. |
+| T2.3 | Next.js intake workspace and exception resolution | Product engineering | Instructor imports a whole synthetic class and resolves mismatches without cross-student disclosure. Adapt prior course, assignment, upload and reflection views after removing direct Firebase/Spark/model dependencies; demonstrate the authorized service path. |
 
 ### P3 Rubric evaluation and exports
 
@@ -55,9 +63,9 @@ Entry: P2 accepted.
 
 | Tranche | Deliverable | Accountable role | Acceptance |
 | --- | --- | --- | --- |
-| T3.1 | Versioned rubric setup and assessment provider contract | Assessment engineering | Instructor activates verified criteria; exact versions govern jobs; full text fits or holds; arithmetic is deterministic. |
-| T3.2 | Evidence-grounded feedback and release validation | Assessment engineering | Unsupported quotes, conflicting feedback, prompt injection and unqualified routes cannot yield released grades. |
-| T3.3 | Review overrides and versioned export packages | Product engineering | Original/feedback side-by-side review works; overrides persist; export contains only eligible student-result pairs. |
+| T3.1 | Versioned rubric setup and assessment provider contract | Assessment engineering | Instructor activates verified criteria; exact versions govern jobs; full text fits or holds; arithmetic is deterministic. Teacher Dashboard level-point, Aetheria maxPoints and Aetheria weighted-level formats import as inactive drafts; labels and provenance survive; ambiguous totals or weights hold. |
+| T3.2 | Evidence-grounded feedback and release validation | Assessment engineering | Unsupported quotes, conflicting feedback, prompt injection and unqualified routes cannot yield released grades. Instructor snippet insertion retains evidence obligations; reused templates cannot imply unsupported student-specific observations. |
+| T3.3 | Review overrides and versioned export packages | Product engineering | Original/feedback side-by-side review works; overrides persist; export contains only eligible student-result pairs. Preserve snippet edits and standards-mastery reporting; percentage conversion requires an explicit verified policy. Historical grades never become newly qualified results. |
 
 ### P4 Semester and class context
 
@@ -65,8 +73,8 @@ Entry: P3 accepted.
 
 | Tranche | Deliverable | Accountable role | Acceptance |
 | --- | --- | --- | --- |
-| T4.1 | Student learning record and revision linkage | Learning engineering | History claims reference actual prior work; corrections invalidate derived summaries; no cross-course links. |
-| T4.2 | Section snapshots and instructor teaching insights | Learning engineering | Coverage denominator is explicit; classmates' identities and raw essays are absent from personal feedback. |
+| T4.1 | Student learning record and revision linkage | Learning engineering | History claims reference actual prior work; corrections invalidate derived summaries; no cross-course links. Optional student reflections retain provenance and affect feedback only unless the activated rubric explicitly assesses them. |
+| T4.2 | Section snapshots and instructor teaching insights | Learning engineering | Coverage denominator is explicit; classmates' identities and raw essays are absent from personal feedback. All assignment entries, including missing and held work, are accounted for; first-five sampling and snippet usage are never presented as whole-class coverage. |
 | T4.3 | Personalization separated from grading | Assessment engineering | Cohort/history changes cannot alter fixed scoring inputs; progress and revision priorities remain evidence-grounded. |
 
 ### P5 Processing routes and recovery
@@ -75,7 +83,7 @@ Entry: P3 accepted.
 
 | Tranche | Deliverable | Accountable role | Acceptance |
 | --- | --- | --- | --- |
-| T5.1 | Permitted cloud route and usage accounting | Platform engineering | Only scrubbed authorized payloads leave; provider policy, spend caps, deadlines and request receipts are enforced. |
+| T5.1 | Permitted cloud route and usage accounting | Platform engineering | Only scrubbed authorized payloads leave; provider policy, spend caps, deadlines and request receipts are enforced. Adapted clients cannot call models directly; unavailable static/demo providers produce typed holds, not feedback, and storage/provider fallback remains explicit. |
 | T5.2 | Mac companion with outbound leases | Platform engineering | Assigned jobs run locally; expired credentials fail; offline machine leaves jobs waiting; no cloud fallback. |
 | T5.3 | Idempotency, resumable jobs and cancellation | Reliability engineering | Injected crashes resume completed stages without duplicate exports; uncertain provider charging is reconciled without blind replay. |
 

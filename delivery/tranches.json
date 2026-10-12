@@ -70,7 +70,8 @@
             "T0.3"
           ],
           "status": "planned",
-          "acceptance": "Instructor, term, course, section and enrollment models survive migrate/rollback tests; cross-scope access is denied."
+          "acceptance": "Instructor, term, course, section and enrollment models survive migrate/rollback tests; cross-scope access is denied. Legacy course/realm, assignment/quest and submission references are scoped mappings; client IDs or roles grant no authority.",
+          "source_review": "docs/legacy-review.md"
         },
         {
           "id": "T1.2",
@@ -112,7 +113,8 @@
             "T1.3"
           ],
           "status": "planned",
-          "acceptance": "Bounded extraction preserves text and paragraph order; scanned, malformed, zip-bomb and ambiguous roster cases hold."
+          "acceptance": "Bounded extraction preserves text and paragraph order; scanned, malformed, zip-bomb and ambiguous roster cases hold. Legacy import dry runs report exact source, imported, duplicate and held counts without writing historical student records.",
+          "source_review": "docs/legacy-review.md"
         },
         {
           "id": "T2.2",
@@ -132,7 +134,8 @@
             "T2.2"
           ],
           "status": "planned",
-          "acceptance": "Instructor imports a whole synthetic class and resolves mismatches without cross-student disclosure."
+          "acceptance": "Instructor imports a whole synthetic class and resolves mismatches without cross-student disclosure. Adapt prior course, assignment, upload and reflection views after removing direct Firebase/Spark/model dependencies; demonstrate the authorized service path.",
+          "source_review": "docs/legacy-review.md"
         }
       ],
       "issue_url": "https://github.com/4444J99/context-aware-essay-evaluation/issues/3",
@@ -154,7 +157,8 @@
             "T2.3"
           ],
           "status": "planned",
-          "acceptance": "Instructor activates verified criteria; exact versions govern jobs; full text fits or holds; arithmetic is deterministic."
+          "acceptance": "Instructor activates verified criteria; exact versions govern jobs; full text fits or holds; arithmetic is deterministic. Teacher Dashboard level-point, Aetheria maxPoints and Aetheria weighted-level formats import as inactive drafts; labels and provenance survive; ambiguous totals or weights hold.",
+          "source_review": "docs/legacy-review.md"
         },
         {
           "id": "T3.2",
@@ -164,7 +168,8 @@
             "T3.1"
           ],
           "status": "planned",
-          "acceptance": "Unsupported quotes, conflicting feedback, prompt injection and unqualified routes cannot yield released grades."
+          "acceptance": "Unsupported quotes, conflicting feedback, prompt injection and unqualified routes cannot yield released grades. Instructor snippet insertion retains evidence obligations; reused templates cannot imply unsupported student-specific observations.",
+          "source_review": "docs/legacy-review.md"
         },
         {
           "id": "T3.3",
@@ -174,7 +179,8 @@
             "T3.2"
           ],
           "status": "planned",
-          "acceptance": "Original/feedback side-by-side review works; overrides persist; export contains only eligible student-result pairs."
+          "acceptance": "Original/feedback side-by-side review works; overrides persist; export contains only eligible student-result pairs. Preserve snippet edits and standards-mastery reporting; percentage conversion requires an explicit verified policy. Historical grades never become newly qualified results.",
+          "source_review": "docs/legacy-review.md"
         }
       ],
       "issue_url": "https://github.com/4444J99/context-aware-essay-evaluation/issues/4",
@@ -196,7 +202,8 @@
             "T3.3"
           ],
           "status": "planned",
-          "acceptance": "History claims reference actual prior work; corrections invalidate derived summaries; no cross-course links."
+          "acceptance": "History claims reference actual prior work; corrections invalidate derived summaries; no cross-course links. Optional student reflections retain provenance and affect feedback only unless the activated rubric explicitly assesses them.",
+          "source_review": "docs/legacy-review.md"
         },
         {
           "id": "T4.2",
@@ -206,7 +213,8 @@
             "T4.1"
           ],
           "status": "planned",
-          "acceptance": "Coverage denominator is explicit; classmates' identities and raw essays are absent from personal feedback."
+          "acceptance": "Coverage denominator is explicit; classmates' identities and raw essays are absent from personal feedback. All assignment entries, including missing and held work, are accounted for; first-five sampling and snippet usage are never presented as whole-class coverage.",
+          "source_review": "docs/legacy-review.md"
         },
         {
           "id": "T4.3",
@@ -238,7 +246,8 @@
             "T3.3"
           ],
           "status": "planned",
-          "acceptance": "Only scrubbed authorized payloads leave; provider policy, spend caps, deadlines and request receipts are enforced."
+          "acceptance": "Only scrubbed authorized payloads leave; provider policy, spend caps, deadlines and request receipts are enforced. Adapted clients cannot call models directly; unavailable static/demo providers produce typed holds, not feedback, and storage/provider fallback remains explicit.",
+          "source_review": "docs/legacy-review.md"
         },
         {
           "id": "T5.2",
@@ -353,5 +362,7 @@
   ],
   "parent_product_repository": "4444J99/edu-organism",
   "parent_owner_issue": "https://github.com/4444J99/edu-organism/issues/55",
-  "workspace_registration_pr": "https://github.com/4444J99/portvs/pull/21"
+  "workspace_registration_pr": "https://github.com/4444J99/portvs/pull/21",
+  "predecessor_sources": "delivery/sources.json",
+  "integration_addendum": ".codex/plans/2026-10-12-context-aware-essay-evaluation-v2.md"
 }

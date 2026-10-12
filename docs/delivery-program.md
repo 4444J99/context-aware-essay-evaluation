@@ -188,3 +188,10 @@ The human authorized T2.1/T2.2 internal component work while build/browser and p
 are blocked. Bounded extraction and all-passage review contracts proceed with generated fixtures.
 This does not admit student uploads or waive parser isolation, PDF/OCR, contextual recall or
 authenticated persistence/review acceptance. See extraction-and-privacy.md.
+
+### Protected intake connection — 2026-10-12
+
+The human authorized connecting T2 extraction/privacy contracts to authenticated intake. The
+fixture-only protected service now joins durable vault objects, scoped metadata/events and a
+version-bound dashboard review panel. Student uploads, PDF/OCR and all qualification dependencies
+remain held. See protected-intake.md and receipts/2026-10-12-protected-intake.md.

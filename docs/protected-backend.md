@@ -101,3 +101,9 @@ web target; protected backend qualification precedes dashboard integration.
 
 Implementation references: [PyJWT verification](https://pyjwt.readthedocs.io/en/stable/usage.html)
 and [psycopg transactions](https://www.psycopg.org/psycopg3/docs/basic/transactions.html).
+
+## Protected fixture intake upgrade
+
+The backend now requires migration 002 and eight forced-RLS tables. See
+[protected intake configuration and grants](protected-intake.md) for the disabled-by-default
+synthetic extraction/privacy workflow. Original migration 001 remains unchanged.

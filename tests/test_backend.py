@@ -97,7 +97,8 @@ def database(postgres_admin):
         admin.execute(sql.SQL("GRANT CONNECT ON DATABASE {} TO {}").format(sql.Identifier(dbname), sql.Identifier(role)))
         admin.execute(sql.SQL("GRANT USAGE ON SCHEMA public TO {}").format(sql.Identifier(role)))
         admin.execute(sql.SQL("GRANT SELECT ON instructors, schema_revisions TO {}").format(sql.Identifier(role)))
-        admin.execute(sql.SQL("GRANT SELECT, INSERT ON terms, courses, sections, enrollments, external_references TO {}").format(sql.Identifier(role)))
+        admin.execute(sql.SQL("GRANT SELECT, INSERT ON terms, courses, sections, enrollments, external_references, intake_submissions, intake_events TO {}").format(sql.Identifier(role)))
+        admin.execute(sql.SQL("GRANT UPDATE ON intake_submissions TO {}").format(sql.Identifier(role)))
     settings["user"] = role
     # CI can use a disposable trust-auth cluster; no production credentials are loaded.
     settings.pop("password", None)
@@ -142,6 +143,10 @@ def test_schema_reapply_rollback_and_unsafe_role(database):
     with pytest.raises(RuntimeError, match="unsafe_database_role"):
         Database(admin).verify()
     rollback_empty(admin)
+    from essay_evaluation.database import MIGRATIONS, migration_digest
+    with psycopg.connect(admin) as conn:
+        conn.execute((MIGRATIONS / "001_scope.up.sql").read_text())
+        conn.execute("INSERT INTO schema_revisions VALUES (%s,%s)", ("001_scope", migration_digest("001_scope")))
     migrate(admin)
     db.verify()
     provision(admin, "populated")

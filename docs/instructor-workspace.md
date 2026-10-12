@@ -86,3 +86,10 @@ locally; after admission changes, run the build and a browser flow through HTTPS
 service. T2.3 acceptance additionally needs qualified whole-class intake, actual exception resolution
 and privacy-review integration. T3.1–T3.3 own activated rubrics, evidence-grounded feedback and
 exports. Hosted KMS/live OIDC qualification and physical retention remain T1.2/T1.3/T6.2.
+
+## Protected intake panel
+
+A separate panel now connects authorized course metadata, server-owned fixture extraction and
+version/generation-bound passage decisions through the existing HTTPS gateway and CSRF session.
+It is independent of local fictional-class state. See [protected intake](protected-intake.md).
+Database and real browser qualification remain pending; no student upload is enabled.

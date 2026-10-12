@@ -7,6 +7,8 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { emptyIntake, importFictionalBatch, coverage, resolveRecord } from "../lib/intake";
 import { syntheticWorkspace, visibleSubmissions, updateSubmission, holds } from "../lib/workspace";
 import { loadCoursePage, ServiceError } from "../lib/backend";
+import { createFixture, readReview, submitReview, IntakeError } from "../lib/protected-intake";
+import { ProtectedIntake } from "../components/protected-intake";
 import { backendOrigin } from "../lib/gateway";
 import { Dashboard } from "../components/dashboard";
 import { RubricMatrix } from "../components/rubric-matrix";
@@ -140,4 +142,62 @@ test("duplicate decisions preserve source, produce a log and reverse without hid
   assert.equal(coverage(restored, "composition", "argument").duplicateEnrollmentIds.length, 1);
   assert.equal(restored.events.at(-1)?.sequence, 4);
   assert.equal(restored.work.submissions.at(-1)?.text, duplicated.work.submissions.at(-1)?.text);
+});
+
+const protectedView = { id, course_id: id, source_revision: id, review_generation: 0, state: "privacy_pending" as const, holds: ["route_unqualified"], passages: [{ id: 1, start: 0, end: 8, flags: ["health_or_disability"], text: "Original" }] };
+test("protected intake writes require CSRF and bind version/generation without write retries", async () => {
+  const calls: { path: string; options?: RequestInit }[] = [];
+  const transport = (async (path: string | URL | Request, options?: RequestInit) => {
+    calls.push({ path: String(path), options });
+    if (String(path) === "/auth/session") return Response.json({ product: "edu", csrf_token: "synthetic-csrf-value-000000000" });
+    assert.equal((options?.headers as Record<string, string>)["X-CSRF-Token"], "synthetic-csrf-value-000000000");
+    assert.equal(options?.credentials, "same-origin"); assert.equal(options?.redirect, "error");
+    const body = JSON.parse(options?.body as string);
+    assert.equal(body.source_revision, id); assert.equal(body.expected_generation, 0);
+    return Response.json({ ...protectedView, review_generation: 1, state: "privacy_reviewed" });
+  }) as typeof fetch;
+  assert.equal((await submitReview(protectedView, { 1: "redact" }, new AbortController().signal, transport)).review_generation, 1);
+  assert.equal(calls.length, 2);
+  await assert.rejects(submitReview(protectedView, {}, new AbortController().signal, transport), IntakeError);
+  assert.equal(calls.length, 2);
+  let deniedCalls = 0;
+  await assert.rejects(createFixture(id, "argument", id, new AbortController().signal, (async () => { deniedCalls++; return Response.json({}, { status: 401 }); }) as typeof fetch), IntakeError);
+  assert.equal(deniedCalls, 1);
+});
+test("protected passage adapter rejects wrong scope and forged passage ranges", async () => {
+  for (const value of [{ ...protectedView, course_id: "wrong-scope" }, { ...protectedView, passages: [{ ...protectedView.passages[0], end: 99 }] }]) {
+    await assert.rejects(readReview(id, id, new AbortController().signal, (async () => Response.json(value)) as typeof fetch), IntakeError);
+  }
+});
+test("protected dashboard persists a fixture and submits explicit passage decisions", async () => {
+  const dom = new JSDOM("<!doctype html><div id='protected-root'></div>", { url: "https://edu.example" });
+  Object.defineProperty(globalThis, "window", { value: dom.window, configurable: true });
+  Object.defineProperty(globalThis, "document", { value: dom.window.document, configurable: true });
+  Object.defineProperty(globalThis, "navigator", { value: dom.window.navigator, configurable: true });
+  (globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
+  const previous = globalThis.fetch; let generation = 0; let writes = 0;
+  globalThis.fetch = (async (path: string | URL | Request, options?: RequestInit) => {
+    const url = String(path);
+    if (url === "/v1/session") return Response.json(session);
+    if (url === "/v1/courses") return Response.json({ items: [{ id, term_id: id, title: "Protected synthetic course" }], next_cursor: null });
+    if (url === "/auth/session") return Response.json({ product: "edu", csrf_token: "synthetic-csrf-value-000000000" });
+    if (options?.method === "POST") {
+      assert.equal((options.headers as Record<string, string>)["X-CSRF-Token"], "synthetic-csrf-value-000000000"); writes++;
+      if (url.endsWith("/review")) { assert.equal(JSON.parse(options.body as string).decisions["1"], "redact"); generation = 1; }
+    }
+    return Response.json({ ...protectedView, review_generation: generation, state: generation ? "privacy_reviewed" : "privacy_pending" });
+  }) as typeof fetch;
+  const container = document.getElementById("protected-root")!; const root = createRoot(container);
+  const button = (text: string) => [...container.querySelectorAll("button")].find(b => b.textContent === text)!;
+  async function click(text: string) { await act(async () => { button(text).dispatchEvent(new dom.window.MouseEvent("click", { bubbles: true })); }); }
+  try {
+    await act(async () => root.render(<ProtectedIntake configured />));
+    await click("Load authorized intake courses"); await click("Persist fictional intake");
+    assert.ok(container.textContent?.includes("Original")); assert.ok(button("Record version-bound review").disabled);
+    const choice = container.querySelectorAll("select")[2];
+    await act(async () => { choice.value = "redact"; choice.dispatchEvent(new dom.window.Event("change", { bubbles: true })); });
+    await click("Record version-bound review");
+    assert.equal(writes, 2); assert.ok(container.textContent?.includes("privacy_reviewed"));
+    assert.ok(container.textContent?.includes("route unqualified")); assert.ok(button("Record version-bound review").disabled);
+  } finally { await act(async () => root.unmount()); globalThis.fetch = previous; dom.window.close(); }
 });

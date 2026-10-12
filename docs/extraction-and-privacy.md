@@ -50,8 +50,9 @@ basis, so offsets are not claimed to match raw DOCX bytes or a pre-normalized TX
 Source text and processed content are omitted from object representations. Review maps, private
 versions, originals and reviewer decisions still belong in the protected vault/audit boundary.
 The authenticated service must own plans and verify actual reviewer/course authority; a UUID
-consistency check is not authorization. These pure contracts are not yet wired to a protected
-upload/review transaction, and the synthetic dashboard checkbox is not a qualified privacy gate.
+consistency check is not authorization. These contracts now feed a fixture-only protected intake/review service and separate dashboard
+panel; see protected-intake.md. Arbitrary student upload and PostgreSQL/live gateway acceptance
+remain pending, and the local synthetic dashboard checkbox is not a qualified privacy gate.
 Human review reduces exposure but does not establish anonymity or clear model/release qualification.
 
 ## Qualification and next integration

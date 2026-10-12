@@ -52,8 +52,10 @@ T2.3 is in progress; student intake and release remain held.
 ## Extraction and privacy components
 
 Bounded TXT/DOCX/ZIP extraction and version-bound contextual passage review are implemented as
-internal components. PDF/OCR remains explicitly held; there is no student upload endpoint.
-See [contracts and qualification boundaries](docs/extraction-and-privacy.md).
+internal components, now connected to a disabled-by-default protected fixture intake service
+and passage-review dashboard panel. PDF/OCR remains explicitly held; there is no student upload endpoint.
+See [contracts and qualification boundaries](docs/extraction-and-privacy.md) and
+[protected intake setup](docs/protected-intake.md).
 
 ## Delivery
 

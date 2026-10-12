@@ -7,8 +7,8 @@ These are owned engineering deliverables, not claims that the entire project is 
 | PostgreSQL scoped backend qualification | T1.1 | Full real-PostgreSQL migration/RLS suite passes | Implemented; local heavy admission and GitHub runner admission prevented execution |
 | Durable authenticated hosted storage | T1.1–T1.3 | OIDC isolation, KMS access separation, restore and staging smoke | Filesystem envelope vault and mocked OIDC login implemented; hosted qualification pending |
 | Physical workspace manifest registration | P0 program owner | PORTVS accepted repository row | [PORTVS PR #21](https://github.com/4444J99/portvs/pull/21), pending acceptance |
-| Bounded document extraction | T2.1 | Adversarial worker, PDF/OCR and protected intake qualification | TXT/DOCX/ZIP primitives implemented; PDF explicitly held |
-| Contextual de-identification | T2.2 | Synthetic attack corpus plus reviewed contextual-disclosure cases | All-passage review/redaction and source mapping contracts implemented; contextual recall and protected workflow qualification pending |
+| Bounded document extraction | T2.1 | Adversarial worker, PDF/OCR and protected intake qualification | Fixture-only protected extraction wired; student uploads and PDF/OCR remain held |
+| Contextual de-identification | T2.2 | Synthetic attack corpus plus reviewed contextual-disclosure cases | Version-bound protected fixture review, encrypted audit and dashboard wired; SQL/live gateway and contextual recall qualification pending |
 | Permitted student-processing configuration | T1.3, T5.1 | Explicit provider/region/retention authorization and credential reference | No real processing enabled |
 | Next.js instructor workspace | T2.3 | Class intake and exception review browser tests | Synthetic intake/coverage/matching and reversible exception controls implemented; 11 component tests pass; build/browser/service qualification pending |
 | Real model assessment | T3.1–T3.2 | Grounded result contract and evidence checks against actual model output | Not connected |

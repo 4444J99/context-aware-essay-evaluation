@@ -8,11 +8,12 @@ import psycopg
 from psycopg.rows import dict_row
 
 MIGRATIONS = Path(__file__).with_name("migrations")
-REVISION = "001_scope"
+REVISIONS = ("001_scope", "002_intake")
+REVISION = REVISIONS[-1]
 
 
-def migration_digest() -> str:
-    return sha256((MIGRATIONS / f"{REVISION}.up.sql").read_bytes()).hexdigest()
+def migration_digest(revision: str = REVISION) -> str:
+    return sha256((MIGRATIONS / f"{revision}.up.sql").read_bytes()).hexdigest()
 
 
 def migrate(dsn: str) -> None:
@@ -20,13 +21,13 @@ def migrate(dsn: str) -> None:
     with psycopg.connect(dsn, connect_timeout=5) as conn:
         conn.execute("SELECT pg_advisory_xact_lock(38218571)")
         conn.execute("CREATE TABLE IF NOT EXISTS schema_revisions (revision text PRIMARY KEY, checksum text NOT NULL)")
-        rows = conn.execute("SELECT revision, checksum FROM schema_revisions").fetchall()
-        if rows:
-            if rows != [(REVISION, migration_digest())]:
-                raise RuntimeError("schema_revision_mismatch")
-            return
-        conn.execute((MIGRATIONS / f"{REVISION}.up.sql").read_text())
-        conn.execute("INSERT INTO schema_revisions VALUES (%s, %s)", (REVISION, migration_digest()))
+        rows = conn.execute("SELECT revision, checksum FROM schema_revisions ORDER BY revision").fetchall()
+        expected = [(revision, migration_digest(revision)) for revision in REVISIONS]
+        if rows != expected[:len(rows)]:
+            raise RuntimeError("schema_revision_mismatch")
+        for revision, checksum in expected[len(rows):]:
+            conn.execute((MIGRATIONS / f"{revision}.up.sql").read_text())
+            conn.execute("INSERT INTO schema_revisions VALUES (%s, %s)", (revision, checksum))
 
 
 def rollback_empty(dsn: str) -> None:
@@ -36,12 +37,13 @@ def rollback_empty(dsn: str) -> None:
         # Fail rather than let RLS hide populated records from the administrator.
         conn.execute("SET LOCAL row_security = off")
         # Lock against concurrent inserts before checking emptiness.
-        conn.execute("LOCK TABLE instructors, terms, courses, sections, enrollments, external_references IN ACCESS EXCLUSIVE MODE")
+        conn.execute("LOCK TABLE instructors, terms, courses, sections, enrollments, external_references, intake_submissions, intake_events IN ACCESS EXCLUSIVE MODE")
         count = conn.execute("SELECT (SELECT count(*) FROM instructors) + (SELECT count(*) FROM terms)").fetchone()[0]
         if count:
             raise RuntimeError("rollback_requires_empty_schema")
-        conn.execute((MIGRATIONS / f"{REVISION}.down.sql").read_text())
-        conn.execute("DELETE FROM schema_revisions WHERE revision = %s", (REVISION,))
+        for revision in reversed(REVISIONS):
+            conn.execute((MIGRATIONS / f"{revision}.down.sql").read_text())
+        conn.execute("DELETE FROM schema_revisions")
 
 
 class Database:
@@ -62,11 +64,11 @@ class Database:
                 raise RuntimeError("unsafe_database_role")
             if conn.execute("SELECT EXISTS (SELECT 1 FROM pg_tables WHERE schemaname='public' AND pg_has_role(current_user, tableowner, 'USAGE'))").fetchone()[0]:
                 raise RuntimeError("runtime_role_must_not_own_tables")
-            protected = conn.execute("SELECT count(*) FROM pg_class JOIN pg_namespace ON pg_namespace.oid=pg_class.relnamespace WHERE nspname='public' AND relname = ANY(%s) AND relrowsecurity AND relforcerowsecurity", (["instructors", "terms", "courses", "sections", "enrollments", "external_references"],)).fetchone()[0]
-            if protected != 6:
+            protected = conn.execute("SELECT count(*) FROM pg_class JOIN pg_namespace ON pg_namespace.oid=pg_class.relnamespace WHERE nspname='public' AND relname = ANY(%s) AND relrowsecurity AND relforcerowsecurity", (["instructors", "terms", "courses", "sections", "enrollments", "external_references", "intake_submissions", "intake_events"],)).fetchone()[0]
+            if protected != 8:
                 raise RuntimeError("schema_row_security_required")
-            rows = conn.execute("SELECT revision, checksum FROM schema_revisions").fetchall()
-            if rows != [(REVISION, migration_digest())]:
+            rows = conn.execute("SELECT revision, checksum FROM schema_revisions ORDER BY revision").fetchall()
+            if rows != [(revision, migration_digest(revision)) for revision in REVISIONS]:
                 raise RuntimeError("schema_revision_mismatch")
 
     @contextmanager

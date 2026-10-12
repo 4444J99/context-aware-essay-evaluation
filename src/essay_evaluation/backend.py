@@ -48,13 +48,15 @@ class ReferenceInput(Input):
     target_id: UUID
 
 
-def create_backend(database: Database, verifier: TokenVerifier, login=None) -> FastAPI:
+def create_backend(database: Database, verifier: TokenVerifier, login=None, intake_service=None) -> FastAPI:
     @asynccontextmanager
     async def lifespan(app):
         database.verify()
         yield
 
     app = FastAPI(title="edu Protected Backend", version="0.2.0", lifespan=lifespan, docs_url=None, redoc_url=None)
+    from .request_limits import MetadataBodyLimit
+    app.add_middleware(MetadataBodyLimit)
     bearer = HTTPBearer(auto_error=False)
 
     def scoped(request: Request, credentials: HTTPAuthorizationCredentials | None = Depends(bearer)):
@@ -82,7 +84,7 @@ def create_backend(database: Database, verifier: TokenVerifier, login=None) -> F
     async def invalid_input(request, exc):
         # Never reflect supplied values, names or tokens in validation responses.
         return JSONResponse(status_code=422, content={"detail": "invalid_request", "fields": [
-            {"location": list(e["loc"]), "type": e["type"]} for e in exc.errors()
+            {"type": e["type"]} for e in exc.errors()
         ]})
 
     @app.exception_handler(psycopg.Error)
@@ -108,7 +110,8 @@ def create_backend(database: Database, verifier: TokenVerifier, login=None) -> F
     def health():
         return {"product": "edu", "component": "essay-evaluation", "mode": "protected_metadata",
                 "real_student_data_enabled": False, "inference_enabled": False,
-                "browser_login": "configured" if login else "unconfigured"}
+                "browser_login": "configured" if login else "unconfigured",
+                "protected_intake": "synthetic_only" if intake_service else "unconfigured"}
 
     @app.get("/v1/session")
     def session(scope=Depends(scoped, scope="function")):
@@ -185,6 +188,9 @@ def create_backend(database: Database, verifier: TokenVerifier, login=None) -> F
         require(conn, "courses", course_id, owner)
         return page(conn.execute("SELECT id,course_id,source,kind,external_id,target_id FROM external_references WHERE instructor_id=%s AND course_id=%s AND (%s::uuid IS NULL OR id>%s) ORDER BY id LIMIT 101", (owner, course_id, after, after)).fetchall())
 
+    from .intake_api import install_intake_routes
+    install_intake_routes(app, scoped, intake_service)
+
     if login is not None:
         from .login import install_login_routes
         install_login_routes(app, login)
@@ -220,4 +226,22 @@ def configured_backend() -> FastAPI:
                                          os.environ["EDU_OIDC_TOKEN_URL"], client_id, os.environ.get("EDU_OIDC_CLIENT_SECRET")),
                              SessionStore(root / "index", vault), verifier,
                              TokenVerifier(verifier.issuer, client_id, os.environ["EDU_OIDC_JWKS_URL"]), database)
-    return create_backend(database, verifier, login)
+    mode = os.environ.get("EDU_INTAKE_MODE", "disabled")
+    if mode not in {"disabled", "synthetic"}:
+        raise ValueError("intake_mode_not_qualified")
+    intake_service = None
+    if mode == "synthetic":
+        import base64
+        import json
+        from pathlib import Path
+        from .durable_vault import DomainKeyRing, DurableVault
+        from .intake import IntakeService
+        vaults = []
+        for domain in ("identity", "content"):
+            prefix = "EDU_INTAKE_" + domain.upper()
+            keys = {version: base64.b64decode(value, validate=True) for version, value in json.loads(os.environ[prefix + "_KEYS_JSON"]).items()}
+            vaults.append(DurableVault(Path(os.environ[prefix + "_ROOT"]), DomainKeyRing(domain, os.environ[prefix + "_KEY_VERSION"], keys)))
+        if set(vaults[0].provider.keys.values()) & set(vaults[1].provider.keys.values()):
+            raise ValueError("identity_and_content_keys_must_differ")
+        intake_service = IntakeService(*vaults)
+    return create_backend(database, verifier, login, intake_service)

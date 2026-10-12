@@ -1,0 +1,42 @@
+export type IntakeView = { id: string; course_id: string; source_revision: string; review_generation: number; state: "extraction_held" | "privacy_pending" | "privacy_reviewed"; holds: string[] };
+export type ReviewView = IntakeView & { passages: { id: number; start: number; end: number; flags: string[]; text: string }[] };
+export type Decision = "retain" | "redact" | "hold";
+export class IntakeError extends Error {}
+const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+function identifier(value: string) { if (!uuid.test(value)) throw new IntakeError("Invalid protected record."); return value; }
+async function call(path: string, body: unknown, signal: AbortSignal, transport: typeof fetch): Promise<unknown> {
+  try {
+    const headers: Record<string, string> = { Accept: "application/json" };
+    if (body !== undefined) {
+      const session = await transport("/auth/session", { credentials: "same-origin", cache: "no-store", redirect: "error", signal });
+      if (!session.ok) throw new IntakeError("Protected session unavailable. Sign in again.");
+      const value = await session.json();
+      if (value.product !== "edu" || typeof value.csrf_token !== "string" || value.csrf_token.length < 16 || value.csrf_token.length > 256) throw new IntakeError("Protected session response invalid.");
+      headers["X-CSRF-Token"] = value.csrf_token; headers["Content-Type"] = "application/json";
+    }
+    const response = await transport(path, { method: body === undefined ? "GET" : "POST", body: body === undefined ? undefined : JSON.stringify(body), headers, credentials: "same-origin", cache: "no-store", redirect: "error", signal });
+    if (!response.ok) throw new IntakeError(response.status === 409 ? "Review or request conflict. Refresh before deciding again." : response.status === 401 || response.status === 403 ? "Protected session or instructor scope unavailable." : "Protected intake unavailable or request held.");
+    return await response.json();
+  } catch (error) { if (error instanceof IntakeError) throw error; throw new IntakeError("Protected intake unavailable. No automatic write retry."); }
+}
+function validate(value: unknown, course: string): IntakeView {
+  const v = value as IntakeView;
+  if (!v || typeof v.id !== "string" || !uuid.test(v.id) || v.course_id !== course || typeof v.source_revision !== "string" || !uuid.test(v.source_revision) || !Number.isSafeInteger(v.review_generation) || v.review_generation < 0 || !["extraction_held", "privacy_pending", "privacy_reviewed"].includes(v.state) || !Array.isArray(v.holds) || v.holds.length > 32 || !v.holds.every(h => typeof h === "string" && /^[a-z_]{1,80}$/.test(h))) throw new IntakeError("Protected intake response invalid.");
+  return v;
+}
+export async function createFixture(course: string, fixture: string, requestId: string, signal: AbortSignal, transport: typeof fetch = fetch) {
+  if (!["argument", "literary", "contextual", "docx-argument", "pdf-held"].includes(fixture)) throw new IntakeError("Unknown fixture.");
+  return validate(await call(`/v1/courses/${identifier(course)}/intake`, { request_id: identifier(requestId), fixture_id: fixture }, signal, transport), course);
+}
+export async function readReview(course: string, submission: string, signal: AbortSignal, transport: typeof fetch = fetch): Promise<ReviewView> {
+  const value = await call(`/v1/courses/${identifier(course)}/intake/${identifier(submission)}/review`, undefined, signal, transport) as ReviewView;
+  validate(value, course);
+  if (value.id !== submission || !Array.isArray(value.passages) || value.passages.length > 2000 || new Set(value.passages.map(p => p.id)).size !== value.passages.length || !value.passages.every(p => Number.isSafeInteger(p.id) && p.id > 0 && Number.isSafeInteger(p.start) && Number.isSafeInteger(p.end) && p.start >= 0 && p.end > p.start && typeof p.text === "string" && Array.from(p.text).length === p.end - p.start && Array.isArray(p.flags) && p.flags.every(f => typeof f === "string" && /^[a-z_]{1,80}$/.test(f))) || value.passages.reduce((n,p) => n + p.text.length, 0) > 200000) throw new IntakeError("Protected passage response invalid.");
+  return value;
+}
+export async function submitReview(view: ReviewView, decisions: Record<number, Decision>, signal: AbortSignal, transport: typeof fetch = fetch) {
+  if (Object.keys(decisions).length !== view.passages.length || !view.passages.every(p => ["retain", "redact", "hold"].includes(decisions[p.id]))) throw new IntakeError("Decide every passage explicitly.");
+  const value = validate(await call(`/v1/courses/${identifier(view.course_id)}/intake/${identifier(view.id)}/review`, { source_revision: view.source_revision, expected_generation: view.review_generation, decisions }, signal, transport), view.course_id);
+  if (value.id !== view.id || value.source_revision !== view.source_revision || value.review_generation !== view.review_generation + 1) throw new IntakeError("Protected review response invalid.");
+  return value;
+}

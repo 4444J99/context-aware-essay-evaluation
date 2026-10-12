@@ -5,7 +5,7 @@ These are owned engineering deliverables, not claims that the entire project is 
 | Gate | Owner tranche | Required evidence | Current state |
 | --- | --- | --- | --- |
 | Durable authenticated hosted storage | T1.1–T1.3 | OIDC isolation, KMS access separation, restore and staging smoke | Planned |
-| Physical workspace manifest registration | P0 program owner | PORTVS accepted repository row | [PORTVS #20](https://github.com/4444J99/portvs/issues/20) |
+| Physical workspace manifest registration | P0 program owner | PORTVS accepted repository row | [PORTVS PR #21](https://github.com/4444J99/portvs/pull/21), pending acceptance |
 | Contextual de-identification | T2.2 | Synthetic attack corpus plus reviewed contextual-disclosure cases | Direct pattern scrubber only |
 | Permitted student-processing configuration | T1.3, T5.1 | Explicit provider/region/retention authorization and credential reference | No real processing enabled |
 | Next.js instructor workspace | T2.3 | Class intake and exception review browser tests | Synthetic workbench only |

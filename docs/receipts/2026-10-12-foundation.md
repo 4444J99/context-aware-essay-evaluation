@@ -40,3 +40,19 @@ No student data, LMS writes, external delivery, model charges or paid infrastruc
 The worktree is retained while its loopback demo and implementation PR remain active.
 Native subagent reservation was rejected; this is single-session verification, not independent review.
 No Limen task state was edited or completion claimed.
+
+## Publication and retained owners
+
+- Foundation implementation: https://github.com/4444J99/context-aware-essay-evaluation/pull/9
+- Source implementation commit: e633c9c9347b3f8b48279985f6e7d7f7451bfebd, verified on origin.
+- PORTVS placement proposal: https://github.com/4444J99/portvs/pull/21
+  (d2c8a0ff4d430f56c774d7abeda268434eb8709c), with exact remote content readback.
+- Both education Pages were updated with the component, owner issue, program and PR links;
+  appended content was read back successfully. The original design blocks were preserved.
+- Foundation merge submission was deferred as LIFECYCLE-UNKNOWN. The missing lifecycle:delivery
+  classification was subsequently created and applied through available GraphQL capacity.
+  No second merge submission or synchronous CI wait was made; PR #9 remains the owner.
+- GitHub REST mutations reached the shared account rate limit. GraphQL remained available and
+  was used for bounded label and placement publication. No claim of a merge or deployed pilot.
+- Retained local runtime: loopback http://127.0.0.1:8765; active synthetic demo owns this worktree.
+- Next implementation owner: P1 issue #2, starting with T1.1 scoped schema and authorization.

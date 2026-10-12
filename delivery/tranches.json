@@ -51,7 +51,8 @@
         }
       ],
       "issue_url": "https://github.com/4444J99/context-aware-essay-evaluation/issues/1",
-      "milestone_url": "https://github.com/4444J99/context-aware-essay-evaluation/milestone/1"
+      "milestone_url": "https://github.com/4444J99/context-aware-essay-evaluation/milestone/1",
+      "implementation_pr": "https://github.com/4444J99/context-aware-essay-evaluation/pull/9"
     },
     {
       "id": "P1",
@@ -351,5 +352,6 @@
     }
   ],
   "parent_product_repository": "4444J99/edu-organism",
-  "parent_owner_issue": "https://github.com/4444J99/edu-organism/issues/55"
+  "parent_owner_issue": "https://github.com/4444J99/edu-organism/issues/55",
+  "workspace_registration_pr": "https://github.com/4444J99/portvs/pull/21"
 }

@@ -22,6 +22,22 @@ class PrivacyDecision(BaseModel):
     decisions: dict[int, Literal["retain", "redact", "hold"]] = Field(max_length=2000)
 
 
+class AssignmentCreate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    section_id: UUID
+    label: Literal["Fictional writing assignment"] = "Fictional writing assignment"
+
+
+class Resolution(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    source_revision: UUID
+    expected_generation: int = Field(ge=0, le=2_147_483_646)
+    action: Literal["mapping", "exclude", "restore"]
+    assignment_id: UUID | None = None
+    enrollment_id: UUID | None = None
+    reason: Literal["duplicate", "wrong_assignment", "withdrawn", "instructor_correction"] | None = None
+
+
 def install_intake_routes(app, scoped, service):
     @app.exception_handler(IntakeStorageError)
     async def storage_error(request, exc):
@@ -51,3 +67,15 @@ def install_intake_routes(app, scoped, service):
     @app.post("/v1/courses/{course_id}/intake/{submission_id}/review")
     def decide(course_id: UUID, submission_id: UUID, body: PrivacyDecision, scope=Depends(scoped, scope="function")):
         return run(scope, course_id, lambda repo: service.decide(repo, submission_id, body.source_revision, body.expected_generation, body.decisions))
+
+    @app.get("/v1/courses/{course_id}/intake-workspace")
+    def workspace(course_id: UUID, scope=Depends(scoped, scope="function")):
+        return run(scope, course_id, lambda repo: service.workspace(repo))
+
+    @app.post("/v1/courses/{course_id}/assignments", status_code=201)
+    def assignment(course_id: UUID, body: AssignmentCreate, scope=Depends(scoped, scope="function")):
+        return run(scope, course_id, lambda repo: repo.create_assignment(body.section_id, body.label))
+
+    @app.post("/v1/courses/{course_id}/intake/{submission_id}/resolution")
+    def resolve(course_id: UUID, submission_id: UUID, body: Resolution, scope=Depends(scoped, scope="function")):
+        return run(scope, course_id, lambda repo: service.resolve(repo, submission_id, body.source_revision, body.expected_generation, body.action, body.assignment_id, body.enrollment_id, body.reason))

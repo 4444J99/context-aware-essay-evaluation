@@ -8,7 +8,7 @@ import psycopg
 from psycopg.rows import dict_row
 
 MIGRATIONS = Path(__file__).with_name("migrations")
-REVISIONS = ("001_scope", "002_intake")
+REVISIONS = ("001_scope", "002_intake", "003_mapping")
 REVISION = REVISIONS[-1]
 
 
@@ -37,7 +37,7 @@ def rollback_empty(dsn: str) -> None:
         # Fail rather than let RLS hide populated records from the administrator.
         conn.execute("SET LOCAL row_security = off")
         # Lock against concurrent inserts before checking emptiness.
-        conn.execute("LOCK TABLE instructors, terms, courses, sections, enrollments, external_references, intake_submissions, intake_events IN ACCESS EXCLUSIVE MODE")
+        conn.execute("LOCK TABLE instructors, terms, courses, sections, enrollments, external_references, intake_submissions, intake_events, assignments, assignment_enrollments IN ACCESS EXCLUSIVE MODE")
         count = conn.execute("SELECT (SELECT count(*) FROM instructors) + (SELECT count(*) FROM terms)").fetchone()[0]
         if count:
             raise RuntimeError("rollback_requires_empty_schema")
@@ -64,8 +64,8 @@ class Database:
                 raise RuntimeError("unsafe_database_role")
             if conn.execute("SELECT EXISTS (SELECT 1 FROM pg_tables WHERE schemaname='public' AND pg_has_role(current_user, tableowner, 'USAGE'))").fetchone()[0]:
                 raise RuntimeError("runtime_role_must_not_own_tables")
-            protected = conn.execute("SELECT count(*) FROM pg_class JOIN pg_namespace ON pg_namespace.oid=pg_class.relnamespace WHERE nspname='public' AND relname = ANY(%s) AND relrowsecurity AND relforcerowsecurity", (["instructors", "terms", "courses", "sections", "enrollments", "external_references", "intake_submissions", "intake_events"],)).fetchone()[0]
-            if protected != 8:
+            protected = conn.execute("SELECT count(*) FROM pg_class JOIN pg_namespace ON pg_namespace.oid=pg_class.relnamespace WHERE nspname='public' AND relname = ANY(%s) AND relrowsecurity AND relforcerowsecurity", (["instructors", "terms", "courses", "sections", "enrollments", "external_references", "intake_submissions", "intake_events", "assignments", "assignment_enrollments"],)).fetchone()[0]
+            if protected != 10:
                 raise RuntimeError("schema_row_security_required")
             rows = conn.execute("SELECT revision, checksum FROM schema_revisions ORDER BY revision").fetchall()
             if rows != [(revision, migration_digest(revision)) for revision in REVISIONS]:

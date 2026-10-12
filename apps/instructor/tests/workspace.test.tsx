@@ -144,7 +144,7 @@ test("duplicate decisions preserve source, produce a log and reverse without hid
   assert.equal(restored.work.submissions.at(-1)?.text, duplicated.work.submissions.at(-1)?.text);
 });
 
-const protectedView = { id, course_id: id, source_revision: id, review_generation: 0, state: "privacy_pending" as const, holds: ["route_unqualified"], passages: [{ id: 1, start: 0, end: 8, flags: ["health_or_disability"], text: "Original" }] };
+const protectedView = { assignment_id: null, enrollment_id: null, excluded: false, id, course_id: id, source_revision: id, review_generation: 0, state: "privacy_pending" as const, holds: ["route_unqualified"], passages: [{ id: 1, start: 0, end: 8, flags: ["health_or_disability"], text: "Original" }] };
 test("protected intake writes require CSRF and bind version/generation without write retries", async () => {
   const calls: { path: string; options?: RequestInit }[] = [];
   const transport = (async (path: string | URL | Request, options?: RequestInit) => {
@@ -194,10 +194,25 @@ test("protected dashboard persists a fixture and submits explicit passage decisi
     await act(async () => root.render(<ProtectedIntake configured />));
     await click("Load authorized intake courses"); await click("Persist fictional intake");
     assert.ok(container.textContent?.includes("Original")); assert.ok(button("Record version-bound review").disabled);
-    const choice = container.querySelectorAll("select")[2];
+    const choice = [...container.querySelectorAll("label")].find(label => label.textContent?.startsWith("Decision for passage 1"))!.querySelector("select")!;
     await act(async () => { choice.value = "redact"; choice.dispatchEvent(new dom.window.Event("change", { bubbles: true })); });
     await click("Record version-bound review");
     assert.equal(writes, 2); assert.ok(container.textContent?.includes("privacy_reviewed"));
     assert.ok(container.textContent?.includes("route unqualified")); assert.ok(button("Record version-bound review").disabled);
   } finally { await act(async () => root.unmount()); globalThis.fetch = previous; dom.window.close(); }
+});
+
+test("protected resolution binds generation and rejects malformed mapping metadata", async () => {
+  const { resolveIntake, readWorkspace } = await import("../lib/protected-intake");
+  const signal = new AbortController().signal; let writes = 0;
+  const transport = (async (path: string | URL | Request, options?: RequestInit) => {
+    if (String(path) === "/auth/session") return Response.json({ product: "edu", csrf_token: "synthetic-csrf-value-000000000" });
+    writes++; const body = JSON.parse(options?.body as string);
+    assert.equal(body.action, "mapping"); assert.equal(body.expected_generation, 0); assert.equal(body.enrollment_id, id);
+    return Response.json({ ...protectedView, review_generation: 1, assignment_id: id, enrollment_id: id });
+  }) as typeof fetch;
+  assert.equal((await resolveIntake(protectedView, "mapping", id, id, "", signal, transport)).assignment_id, id);
+  assert.equal(writes, 1);
+  await assert.rejects(readWorkspace(id, signal, (async () => Response.json({ assignments: [], sections: [], expected: [{ assignment_id: "bad", enrollment_id: id }], missing: [], submissions: [] })) as typeof fetch), IntakeError);
+  await assert.rejects(readReview(id, id, signal, (async () => Response.json({ ...protectedView, assignment_id: id })) as typeof fetch), IntakeError);
 });

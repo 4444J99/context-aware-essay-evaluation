@@ -13,14 +13,14 @@ client-supplied essay/filename/name/identifier list, arbitrary PDF parser, model
 Run the existing administrator migration command before starting the runtime. Migration 001 is
 unchanged; 002 adds forced-RLS intake_submissions and append-only-by-runtime intake_events.
 The migrator verifies the full existing checksum prefix and applies pending revisions in one
-transaction. Startup now requires both revisions and all eight forced-RLS tables. Never edit the
+transaction. Startup now requires all three revisions and all ten forced-RLS tables. Never edit the
 001 checksum to upgrade. Empty-schema rollback removes 002 before 001 and still refuses populated
 schemas; this is rehearsal, not deletion of classroom records.
 
 In addition to existing runtime grants, an administrator grants:
 
 ```sql
-GRANT SELECT, INSERT ON intake_submissions, intake_events TO edu_api;
+GRANT SELECT, INSERT ON intake_submissions, intake_events, assignments, assignment_enrollments TO edu_api;
 GRANT UPDATE ON intake_submissions TO edu_api;
 ```
 
@@ -91,3 +91,26 @@ Next predicates: full pytest against disposable PostgreSQL; Next production buil
 through HTTPS/login; hosted key separation/restore; supervised parser/PDF/OCR and reviewed privacy
 attack corpus; then scoped assignment/enrollment and durable decision workflow acceptance. Existing
 P1/P2 blockers stay tracked, with no unchanged bootstrap/CI rerun in this slice.
+
+
+## Protected assignment mapping and exceptions
+
+Migration 003 adds instructor/course-scoped assignments and immutable expected-enrollment
+snapshots from an authorized section. Creating an assignment requires a nonempty roster of at
+most 1,000 enrollments. The synthetic route accepts only the fixed fictional assignment label.
+Later enrollment changes do not silently change the denominator; roster revision is future work.
+The bounded workspace fails closed above 1,000 rows in any collection rather than reporting
+partial coverage. Coverage means an active mapped document exists, not privacy or grading approval.
+
+The instructor maps a persisted intake to an expected assignment/enrollment pair, or excludes /
+restores it with an enumerated reason. Composite foreign keys enforce scope and a partial unique
+index prevents two active documents covering one assignment enrollment. Occupied mappings and
+restores return conflict; exclude the duplicate explicitly before restoring its predecessor.
+Original ciphertext remains intact. Every successful resolution advances the same generation as
+privacy review, clears the processed pointer, resets privacy approval, and writes an encrypted
+audit record in the SQL transaction. Stale decisions fail before publication. Course transaction
+locks serialize intake/review/resolution writes; the unique index is independent protection.
+Mapping clears only assignment/enrollment holds. Exclusion and matching never clear PDF/OCR,
+parser, route, synthetic-only, or release qualification holds. Excluded records cannot be privacy
+approved. The protected dashboard exposes assignment creation, queue, coverage, matching and
+exclusion/restoration separately from the in-memory preview.

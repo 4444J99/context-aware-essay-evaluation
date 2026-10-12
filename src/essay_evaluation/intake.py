@@ -61,6 +61,45 @@ class SqlIntakeRepository:
     def review(self, row):
         self.conn.execute("UPDATE intake_submissions SET content_object=%s,review_generation=%s,state=%s,holds=%s WHERE id=%s AND instructor_id=%s AND course_id=%s", (row["content_object"], row["review_generation"], row["state"], row["holds"], row["id"], self.owner, self.course))
 
+    def save_mapping(self, row):
+        self.conn.execute("UPDATE intake_submissions SET assignment_id=%s,enrollment_id=%s,excluded=%s WHERE id=%s AND instructor_id=%s AND course_id=%s", (row["assignment_id"], row["enrollment_id"], row["excluded"], row["id"], self.owner, self.course))
+        self.review(row)
+
+    def expected(self, assignment, enrollment):
+        return self.conn.execute("SELECT enrollment_id FROM assignment_enrollments WHERE assignment_id=%s AND enrollment_id=%s AND course_id=%s AND instructor_id=%s", (assignment, enrollment, self.course, self.owner)).fetchone() is not None
+
+    def occupied(self, assignment, enrollment, submission):
+        return self.conn.execute("SELECT id FROM intake_submissions WHERE assignment_id=%s AND enrollment_id=%s AND id<>%s AND NOT excluded AND course_id=%s AND instructor_id=%s", (assignment, enrollment, submission, self.course, self.owner)).fetchone() is not None
+
+    def workspace(self):
+        self.require_course()
+        result = {}
+        queries = {
+            "assignments": "SELECT id,section_id,label FROM assignments",
+            "expected": "SELECT assignment_id,enrollment_id FROM assignment_enrollments",
+            "submissions": "SELECT * FROM intake_submissions",
+            "sections": "SELECT id,label FROM sections",
+        }
+        for key, query in queries.items():
+            rows = self.conn.execute(query + " WHERE course_id=%s AND instructor_id=%s ORDER BY " + ("assignment_id,enrollment_id" if key == "expected" else "id") + " LIMIT 1001", (self.course, self.owner)).fetchall()
+            if len(rows) > 1000:
+                raise IntakeConflict("workspace_size_limit")
+            result[key] = rows
+        return result
+
+    def create_assignment(self, section, label):
+        self.require_course()
+        if self.conn.execute("SELECT id FROM sections WHERE id=%s AND course_id=%s AND instructor_id=%s", (section, self.course, self.owner)).fetchone() is None:
+            raise LookupError("record_not_found")
+        members = self.conn.execute("SELECT id FROM enrollments WHERE section_id=%s AND course_id=%s AND instructor_id=%s ORDER BY id LIMIT 1001", (section, self.course, self.owner)).fetchall()
+        if not members or len(members) > 1000:
+            raise IntakeConflict("assignment_roster_required_or_too_large")
+        assignment = uuid4()
+        self.conn.execute("INSERT INTO assignments VALUES (%s,%s,%s,%s,%s)", (assignment, self.owner, self.course, section, label))
+        for member in members:
+            self.conn.execute("INSERT INTO assignment_enrollments VALUES (%s,%s,%s,%s)", (assignment, member["id"], self.course, self.owner))
+        return {"id": assignment, "section_id": section, "label": label}
+
     def audit(self, row, action, private_object):
         self.conn.execute("INSERT INTO intake_events (id,instructor_id,course_id,submission_id,generation,action,private_object) VALUES (%s,%s,%s,%s,%s,%s,%s)", (uuid4(), self.owner, self.course, row["id"], row["review_generation"], action, private_object))
 
@@ -76,7 +115,7 @@ class IntakeService:
 
     @staticmethod
     def view(row):
-        return {k: row[k] for k in ("id", "course_id", "source_revision", "review_generation", "state", "holds")}
+        return {k: row[k] for k in ("id", "course_id", "source_revision", "review_generation", "state", "holds", "assignment_id", "enrollment_id", "excluded")}
 
     @staticmethod
     def vault_call(vault, method, *args):
@@ -97,7 +136,7 @@ class IntakeService:
             return self.view(existing)
         data, kind, identifiers = fixture_bytes(fixture_id)
         row = {"id": uuid4(), "instructor_id": repo.owner, "course_id": repo.course, "request_id": request_id,
-               "fixture_id": fixture_id, "source_revision": uuid4(), "review_generation": 0, "content_object": None}
+               "fixture_id": fixture_id, "source_revision": uuid4(), "review_generation": 0, "content_object": None, "assignment_id": None, "enrollment_id": None, "excluded": False}
         try:
             extracted = extract(data, kind)
             row.update(state="privacy_pending", holds=["contextual_review_required"] + QUALIFICATION_HOLDS)
@@ -130,11 +169,14 @@ class IntakeService:
         return {**self.view(row), "passages": [{"id": p.id, "start": p.start, "end": p.end, "flags": p.flags, "text": plan.source[p.start:p.end]} for p in plan.passages]}
 
     def decide(self, repo, submission, source_revision, generation, decisions):
+        repo.require_course()
         row = repo.get(submission, lock=True)
         if row is None:
             raise LookupError("record_not_found")
         if str(row["source_revision"]) != str(source_revision) or row["review_generation"] != generation:
             raise IntakeConflict("review_version_stale")
+        if row["excluded"]:
+            raise IntakeConflict("submission_excluded")
         if row["state"] == "extraction_held":
             raise IntakeConflict("extraction_held")
         source = self.source(repo, row)
@@ -142,7 +184,7 @@ class IntakeService:
         result = finalize_review(plan, source["normalized_text"], str(repo.course), str(row["id"]), str(repo.owner), decisions)
         updated = {**row, "review_generation": generation + 1, "content_object": None,
                    "state": "privacy_reviewed" if result.document else "privacy_pending",
-                   "holds": list(result.holds) + QUALIFICATION_HOLDS}
+                   "holds": list(result.holds) + self.mapping_holds(row)}
         private = {**self.binding(repo, row), "reviewer_id": str(repo.owner), "generation": generation + 1,
                    "decisions": decisions, "source_version": plan.version,
                    "replacements": [vars(r) for r in result.document.replacements] if result.document else []}
@@ -152,4 +194,44 @@ class IntakeService:
                 {**self.binding(repo, row), "generation": generation + 1, "text": result.document.text, "synthetic": True})
         repo.review(updated)
         repo.audit(updated, "privacy_review", audit_id)
+        return self.view(updated)
+
+    @staticmethod
+    def mapping_holds(row):
+        return [h for h in QUALIFICATION_HOLDS if row["assignment_id"] is None or h not in ("assignment_unresolved", "enrollment_unresolved")] + (["submission_excluded"] if row["excluded"] else [])
+
+    def workspace(self, repo):
+        result = repo.workspace()
+        result["submissions"] = [self.view(row) for row in result["submissions"]]
+        covered = {(str(row["assignment_id"]), str(row["enrollment_id"])) for row in result["submissions"] if not row["excluded"] and row["assignment_id"]}
+        result["missing"] = [row for row in result["expected"] if (str(row["assignment_id"]), str(row["enrollment_id"])) not in covered]
+        return result
+
+    def resolve(self, repo, submission, source_revision, generation, action, assignment=None, enrollment=None, reason=None):
+        repo.require_course()
+        row = repo.get(submission, lock=True)
+        if row is None:
+            raise LookupError("record_not_found")
+        if str(row["source_revision"]) != str(source_revision) or row["review_generation"] != generation:
+            raise IntakeConflict("review_version_stale")
+        updated = {**row, "review_generation": generation + 1, "content_object": None}
+        if action == "mapping":
+            if assignment is None or enrollment is None or not repo.expected(assignment, enrollment):
+                raise IntakeConflict("assignment_enrollment_not_expected")
+            updated.update(assignment_id=assignment, enrollment_id=enrollment)
+        elif action in ("exclude", "restore") and reason in ("duplicate", "wrong_assignment", "withdrawn", "instructor_correction"):
+            updated["excluded"] = action == "exclude"
+        else:
+            raise ValueError("resolution_invalid")
+        if not updated["excluded"] and updated["assignment_id"] and repo.occupied(updated["assignment_id"], updated["enrollment_id"], submission):
+            raise IntakeConflict("enrollment_already_covered")
+        updated["state"] = "extraction_held" if row["state"] == "extraction_held" else "privacy_pending"
+        extraction = [h for h in row["holds"] if h not in QUALIFICATION_HOLDS and h != "submission_excluded"] if row["state"] == "extraction_held" else ["contextual_review_required"]
+        updated["holds"] = extraction + self.mapping_holds(updated)
+        audit = {**self.binding(repo, row), "reviewer_id": str(repo.owner), "generation": generation + 1,
+                 "action": action, "reason": reason, "assignment_id": str(updated["assignment_id"]) if updated["assignment_id"] else None,
+                 "enrollment_id": str(updated["enrollment_id"]) if updated["enrollment_id"] else None}
+        private = self.vault_call(self.identity, "put", str(repo.course), audit)
+        repo.save_mapping(updated)
+        repo.audit(updated, action, private)
         return self.view(updated)

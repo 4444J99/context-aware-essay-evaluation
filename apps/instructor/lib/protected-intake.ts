@@ -1,10 +1,10 @@
-export type IntakeView = { id: string; course_id: string; source_revision: string; review_generation: number; state: "extraction_held" | "privacy_pending" | "privacy_reviewed"; holds: string[] };
+export type IntakeView = { id: string; course_id: string; source_revision: string; review_generation: number; state: "extraction_held" | "privacy_pending" | "privacy_reviewed"; holds: string[]; assignment_id: string | null; enrollment_id: string | null; excluded: boolean };
 export type ReviewView = IntakeView & { passages: { id: number; start: number; end: number; flags: string[]; text: string }[] };
 export type Decision = "retain" | "redact" | "hold";
 export class IntakeError extends Error {}
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-function identifier(value: string) { if (!uuid.test(value)) throw new IntakeError("Invalid protected record."); return value; }
-async function call(path: string, body: unknown, signal: AbortSignal, transport: typeof fetch): Promise<unknown> {
+export function identifier(value: string) { if (!uuid.test(value)) throw new IntakeError("Invalid protected record."); return value; }
+export async function call(path: string, body: unknown, signal: AbortSignal, transport: typeof fetch): Promise<unknown> {
   try {
     const headers: Record<string, string> = { Accept: "application/json" };
     if (body !== undefined) {
@@ -22,6 +22,7 @@ async function call(path: string, body: unknown, signal: AbortSignal, transport:
 function validate(value: unknown, course: string): IntakeView {
   const v = value as IntakeView;
   if (!v || typeof v.id !== "string" || !uuid.test(v.id) || v.course_id !== course || typeof v.source_revision !== "string" || !uuid.test(v.source_revision) || !Number.isSafeInteger(v.review_generation) || v.review_generation < 0 || !["extraction_held", "privacy_pending", "privacy_reviewed"].includes(v.state) || !Array.isArray(v.holds) || v.holds.length > 32 || !v.holds.every(h => typeof h === "string" && /^[a-z_]{1,80}$/.test(h))) throw new IntakeError("Protected intake response invalid.");
+  if ((typeof v.excluded !== "boolean" || ![v.assignment_id, v.enrollment_id].every(id => id === null || typeof id === "string" && uuid.test(id)) || (v.assignment_id === null) !== (v.enrollment_id === null))) throw new IntakeError("Protected mapping response invalid.");
   return v;
 }
 export async function createFixture(course: string, fixture: string, requestId: string, signal: AbortSignal, transport: typeof fetch = fetch) {
@@ -38,5 +39,26 @@ export async function submitReview(view: ReviewView, decisions: Record<number, D
   if (Object.keys(decisions).length !== view.passages.length || !view.passages.every(p => ["retain", "redact", "hold"].includes(decisions[p.id]))) throw new IntakeError("Decide every passage explicitly.");
   const value = validate(await call(`/v1/courses/${identifier(view.course_id)}/intake/${identifier(view.id)}/review`, { source_revision: view.source_revision, expected_generation: view.review_generation, decisions }, signal, transport), view.course_id);
   if (value.id !== view.id || value.source_revision !== view.source_revision || value.review_generation !== view.review_generation + 1) throw new IntakeError("Protected review response invalid.");
+  return value;
+}
+
+export type Workspace = { assignments: { id: string; section_id: string; label: string }[]; sections: { id: string; label: string }[]; expected: { assignment_id: string; enrollment_id: string }[]; missing: { assignment_id: string; enrollment_id: string }[]; submissions: IntakeView[] };
+export async function readWorkspace(course: string, signal: AbortSignal, transport: typeof fetch = fetch): Promise<Workspace> {
+  const value = await call(`/v1/courses/${identifier(course)}/intake-workspace`, undefined, signal, transport) as Workspace;
+  if (!value || ![value.assignments, value.sections, value.expected, value.missing, value.submissions].every(a => Array.isArray(a) && a.length <= 1000)) throw new IntakeError("Protected workspace response invalid.");
+  for (const a of value.assignments) { identifier(a.id); identifier(a.section_id); if (typeof a.label !== "string" || a.label.length > 120) throw new IntakeError("Invalid assignment."); }
+  for (const a of value.sections) { identifier(a.id); if (typeof a.label !== "string" || a.label.length > 120) throw new IntakeError("Invalid section."); }
+  for (const a of [...value.expected, ...value.missing]) { identifier(a.assignment_id); identifier(a.enrollment_id); }
+  for (const row of value.submissions) validate(row, course);
+  return value;
+}
+export async function createAssignment(course: string, section: string, signal: AbortSignal) {
+  await call(`/v1/courses/${identifier(course)}/assignments`, { section_id: identifier(section) }, signal, fetch);
+}
+export async function resolveIntake(view: IntakeView, action: "mapping" | "exclude" | "restore", assignment: string, enrollment: string, reason: string, signal: AbortSignal, transport: typeof fetch = fetch) {
+  const body = { source_revision: identifier(view.source_revision), expected_generation: view.review_generation, action,
+    ...(action === "mapping" ? { assignment_id: identifier(assignment), enrollment_id: identifier(enrollment) } : { reason }) };
+  const value = validate(await call(`/v1/courses/${identifier(view.course_id)}/intake/${identifier(view.id)}/resolution`, body, signal, transport), view.course_id);
+  if (value.id !== view.id || value.source_revision !== view.source_revision || value.review_generation !== view.review_generation + 1) throw new IntakeError("Protected resolution response invalid.");
   return value;
 }

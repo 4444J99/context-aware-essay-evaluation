@@ -97,7 +97,7 @@ def database(postgres_admin):
         admin.execute(sql.SQL("GRANT CONNECT ON DATABASE {} TO {}").format(sql.Identifier(dbname), sql.Identifier(role)))
         admin.execute(sql.SQL("GRANT USAGE ON SCHEMA public TO {}").format(sql.Identifier(role)))
         admin.execute(sql.SQL("GRANT SELECT ON instructors, schema_revisions TO {}").format(sql.Identifier(role)))
-        admin.execute(sql.SQL("GRANT SELECT, INSERT ON terms, courses, sections, enrollments, external_references, intake_submissions, intake_events TO {}").format(sql.Identifier(role)))
+        admin.execute(sql.SQL("GRANT SELECT, INSERT ON terms, courses, sections, enrollments, external_references, intake_submissions, intake_events, assignments, assignment_enrollments TO {}").format(sql.Identifier(role)))
         admin.execute(sql.SQL("GRANT UPDATE ON intake_submissions TO {}").format(sql.Identifier(role)))
     settings["user"] = role
     # CI can use a disposable trust-auth cluster; no production credentials are loaded.

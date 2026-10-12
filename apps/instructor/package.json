@@ -1,0 +1,26 @@
+{
+  "name": "@edu/instructor-workspace",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev --hostname 127.0.0.1 --port 8766",
+    "build": "next build",
+    "start": "next start --hostname 127.0.0.1 --port 8766",
+    "typecheck": "tsc --noEmit",
+    "test": "tsx --test tests/*.test.tsx"
+  },
+  "dependencies": {
+    "next": "16.4.0",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
+  },
+  "devDependencies": {
+    "@types/jsdom": "^30.0.0",
+    "@types/node": "^26.6.5",
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "jsdom": "^30.1.2",
+    "tsx": "^4.20.0",
+    "typescript": "^7.0.2"
+  }
+}

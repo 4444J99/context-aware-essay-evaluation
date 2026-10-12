@@ -9,7 +9,7 @@ These are owned engineering deliverables, not claims that the entire project is 
 | Physical workspace manifest registration | P0 program owner | PORTVS accepted repository row | [PORTVS PR #21](https://github.com/4444J99/portvs/pull/21), pending acceptance |
 | Contextual de-identification | T2.2 | Synthetic attack corpus plus reviewed contextual-disclosure cases | Direct pattern scrubber only |
 | Permitted student-processing configuration | T1.3, T5.1 | Explicit provider/region/retention authorization and credential reference | No real processing enabled |
-| Next.js instructor workspace | T2.3 | Class intake and exception review browser tests | Synthetic workbench only |
+| Next.js instructor workspace | T2.3 | Class intake and exception review browser tests | Next.js synthetic review components and protected metadata adapter implemented; build/browser/service qualification pending |
 | Real model assessment | T3.1–T3.2 | Grounded result contract and evidence checks against actual model output | Not connected |
 | Semester/class context | T4.1–T4.3 | Longitudinal evidence and cohort-independence checks | Planned |
 | Local and cloud routes | T5.1–T5.3 | Separate functional, recovery and qualification results | Both pending |

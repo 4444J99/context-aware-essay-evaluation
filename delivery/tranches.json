@@ -136,9 +136,11 @@
           "depends_on": [
             "T2.2"
           ],
-          "status": "planned",
+          "status": "in_progress",
           "acceptance": "Instructor imports a whole synthetic class and resolves mismatches without cross-student disclosure. Adapt prior course, assignment, upload and reflection views after removing direct Firebase/Spark/model dependencies; demonstrate the authorized service path.",
-          "source_review": "docs/legacy-review.md"
+          "source_review": "docs/legacy-review.md",
+          "implementation_pr": "https://github.com/4444J99/context-aware-essay-evaluation/pull/9",
+          "implementation_note": "Parallel presentation work authorized while T1/T2 privacy gates remain pending: Next.js synthetic class dashboard, rubric/reflection/snippet components and same-origin protected metadata adapter. No student intake or accepted integration."
         }
       ],
       "issue_url": "https://github.com/4444J99/context-aware-essay-evaluation/issues/3",

@@ -174,3 +174,10 @@ GitHub milestones and phase issues are the execution backlog. delivery/tranches.
 version-controlled dependency and acceptance contract. docs/receipts records observed evidence.
 docs/release-gates.md owns missing production capabilities. The Page remains the original
 design reference; its repository link is the route to current implementation truth.
+
+### Parallel dashboard implementation authorization — 2026-10-12
+
+The human authorized reusable dashboard integration while protected qualification gates are pending.
+T2.3 presentation/components proceed against synthetic fixtures and a separate protected metadata
+adapter. Its dependency and acceptance gates are unchanged. No student-processing path is enabled.
+See [workspace integration](instructor-workspace.md) and the T2.3 receipt.

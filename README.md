@@ -41,6 +41,13 @@ synthetic tests. Tokens remain server-side; browser writes require origin and CS
 See [vault and login boundaries](docs/vault-and-login.md). Hosted KMS, live identity-provider
 and database integration acceptance remain pending.
 
+## Instructor workspace
+
+The Next.js workspace now adapts course/assignment selection, rubric display, writer reflections
+and feedback snippets into a fictional class review flow. A separate same-origin adapter reads
+protected course metadata when configured. See [run and integration boundaries](docs/instructor-workspace.md).
+T2.3 is in progress; student intake and release remain held.
+
 ## Delivery
 
 - [Approved implementation plan](.codex/plans/2026-10-12-context-aware-essay-evaluation.md)

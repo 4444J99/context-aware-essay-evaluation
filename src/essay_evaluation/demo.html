@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>edu · Essay evaluation intake</title>
+<style>
+:root{color-scheme:light;--ink:#142a2d;--muted:#586b6e;--paper:#f7f5f0;--line:#ccd5ce;--accent:#176355}
+*{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink);font:16px/1.65 system-ui,sans-serif}
+main{max-width:1120px;margin:auto;padding:40px 24px}header{border-bottom:1px solid var(--line);padding-bottom:24px}
+.eyebrow{letter-spacing:.12em;font-size:12px;text-transform:uppercase;color:var(--accent);font-weight:700}
+h1{font:clamp(30px,5vw,52px)/1.15 Georgia,serif;max-width:750px;margin:16px 0}h2{font-size:20px;margin-top:0}
+p{max-width:760px}.sub{color:var(--muted)}.banner{background:#fff1cc;border:1px solid #d5b968;border-radius:8px;padding:12px 16px;margin:24px 0}
+.grid{display:grid;grid-template-columns:320px 1fr;gap:24px}.card{background:#fff;border:1px solid var(--line);border-radius:12px;padding:24px}
+label{display:block;font-weight:600;margin:16px 0 6px}select,button{width:100%;font:inherit;padding:10px;border-radius:6px;border:1px solid var(--line)}
+button{background:var(--accent);color:white;margin-top:24px;cursor:pointer;font-weight:600}button:disabled{opacity:.6;cursor:wait}
+button:focus-visible,select:focus-visible{outline:3px solid #d99920;outline-offset:3px}
+pre{white-space:pre-wrap;overflow-wrap:anywhere;font:15px/1.7 system-ui;background:#f5f7f5;border-radius:8px;padding:16px}
+.status{display:inline-block;background:#fff1cc;border-radius:20px;padding:3px 12px;font-size:13px;font-weight:700}
+dl{display:grid;grid-template-columns:140px 1fr;gap:8px;font-size:14px}dt{font-weight:600}dd{margin:0;overflow-wrap:anywhere}
+small{color:var(--muted)}footer{margin-top:30px;color:var(--muted);font-size:13px}
+@media(max-width:760px){.grid{grid-template-columns:1fr}main{padding:24px 16px}dl{grid-template-columns:1fr}}
+</style>
+</head>
+<body><main>
+<header><div class="eyebrow">edu / Essay evaluation</div><h1>Know the writing.<br>Protect the writer.</h1>
+<p class="sub">The first working slice: follow a fictional submission through identity replacement, encrypted storage, and review checks.</p></header>
+<div class="banner"><strong>Synthetic demonstration.</strong> These examples are invented. This build accepts no student uploads and produces no grades.</div>
+<div class="grid"><section class="card"><h2>Run an intake</h2>
+<form id="form"><label for="fixture">Fictional essay</label><select id="fixture"><option value="argument">Public libraries argument</option><option value="literary">Macbeth interpretation</option><option value="contextual">Personal narrative with identifying context</option></select>
+<label for="cache">Term cache policy preview</label><select id="cache"><option value="term">Through the active term</option><option value="after_run">Purge after processing</option><option value="hours_24">24 hours</option><option value="days_7">Seven days</option></select>
+<button id="run" type="submit">Process example</button></form>
+<p><small>Retention dates are previews. Demo records are temporary and removed when the service stops.</small></p></section>
+<section class="card" aria-labelledby="result-title"><h2 id="result-title">Evaluation copy</h2><div id="result" aria-live="polite"><p class="sub">Choose an example to inspect the scrubbed text and the checks that keep it on hold.</p></div></section></div>
+<footer>Part of edu · Local synthetic foundation · Hosted identity, model evaluation, and semester history are upcoming tranches.</footer>
+</main><script>
+const token="__TOKEN__"; // allow-secret: server replaces this placeholder with a per-process demo nonce
+const holds={privacy_review_required:"Contextual privacy review is still required.",evidence_invalid:"No model assessment has been validated.",route_unqualified:"No evaluation model is qualified for grade release.",synthetic_demonstration_only:"Synthetic examples cannot become student grades."};
+const append=(parent,tag,value)=>{const el=document.createElement(tag);el.textContent=value;parent.append(el);return el};
+document.getElementById("form").addEventListener("submit",async event=>{
+event.preventDefault();const button=document.getElementById("run");const result=document.getElementById("result");button.disabled=true;result.replaceChildren();append(result,"p","Processing fictional submission…");
+try{const response=await fetch("/v1/demo/intake",{method:"POST",headers:{"Content-Type":"application/json","Idempotency-Key":crypto.randomUUID(),"X-Demo-Token":token},body:JSON.stringify({fixture_id:document.getElementById("fixture").value,cache_mode:document.getElementById("cache").value})});
+if(!response.ok)throw new Error("Intake could not finish. Refresh and try again.");
+const data=await response.json();result.replaceChildren();append(result,"span","Held for review").className="status";append(result,"pre",data.scrubbed_text);const dl=document.createElement("dl");result.append(dl);
+for(const [label,value]of [["Student ID",data.student_id],["Redactions",Object.entries(data.redaction_counts).map(([key,count])=>key.toLowerCase()+": "+count).join(", ")||"None detected"],["Cache expiry preview",data.retention_preview.cache_expires_at],["Grade","No grade generated"]]){append(dl,"dt",label);append(dl,"dd",value)}
+append(result,"h3","Why this remains on hold");const list=document.createElement("ul");result.append(list);for(const code of data.holds)append(list,"li",holds[code]||code);
+}catch(error){result.replaceChildren();append(result,"p",error.message)}finally{button.disabled=false}
+});
+</script></body></html>

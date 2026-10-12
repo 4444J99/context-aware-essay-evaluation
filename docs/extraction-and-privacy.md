@@ -37,7 +37,8 @@ It runs the direct scrubber and produces a review item for every non-empty parag
 unflagged ones. Health/disability, family/legal and distinctive-role/location patterns only
 prioritize review; they are deliberately incomplete. Reflection and other student-authored context
 must receive their own source-bound review before use. Known identifier values are separately
-bounded and must come from an authorized identity scope.
+bounded and must come from an authorized identity scope. At most 2,000 direct redaction
+candidates are collected; excessive/repeated identifier matches hold rather than amplify memory.
 
 `finalize_review` requires the same source version and scope, reviewer identity and an explicit
 retain/redact/hold decision for each passage. Missing or uncertain decisions return no processed

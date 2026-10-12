@@ -138,3 +138,9 @@ def test_email_sentence_punctuation_is_scrubbed(suffix):
     result = scrub("Contact fictional@example.invalid" + suffix)
     assert "fictional@example.invalid" not in result.text
     assert result.text.endswith(suffix)
+
+
+def test_redaction_candidate_limit_prevents_match_amplification():
+    from essay_evaluation.privacy import scrub
+    with pytest.raises(ValueError, match="redaction_candidate_limit"):
+        scrub("aa " * 2100, ("aa",) * 100)

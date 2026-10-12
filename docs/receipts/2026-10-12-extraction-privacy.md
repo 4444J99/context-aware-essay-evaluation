@@ -21,7 +21,9 @@ Tests exposed an existing email scrubber punctuation boundary defect. Corrected 
 added six punctuation regressions. Also bounded known identifier lengths before regex construction.
 
 Verification: `uv run --locked --extra test pytest tests/test_foundation.py tests/test_extraction_privacy.py -q`
-passed 52 tests (23 foundation + 29 new cases). After enabling explicit DTD rejection, the implicated
+passed 53 tests (23 foundation + 30 new cases) after final candidate-amplification hardening. Direct
+redaction collection now stops at 2,000 candidates, including repeated known identifiers. An earlier
+52-case batch passed; after enabling explicit DTD rejection, the implicated
 DOCX/XML shard passed six tests with 23 deselected. One upstream Starlette test-client deprecation
 warning in the foundation batch. `python3 scripts/check_delivery.py` and `git diff --check` passed.
 No PostgreSQL, build/browser, live issuer, cloud or model run was attempted for this component slice.

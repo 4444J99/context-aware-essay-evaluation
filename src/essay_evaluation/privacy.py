@@ -51,14 +51,21 @@ def scrub(text: str, known_identifiers: tuple[str, ...] = ()) -> ScrubbedDocumen
     if len(text) > 100_000 or len(known_identifiers) > 100:
         raise ValueError("input_limit")
     candidates = []
+
+    def collect(pattern, category):
+        for match in pattern.finditer(text):
+            if len(candidates) >= 2000:
+                raise ValueError("redaction_candidate_limit")
+            candidates.append((match.start(), match.end(), category, match.group()))
+
     for identifier in known_identifiers:
         value = unicodedata.normalize("NFC", identifier).strip()
         if len(value) < 2:
             raise ValueError("identifier_too_short")
         pattern = re.compile(r"(?<!\w)" + re.escape(value) + r"(?!\w)", re.IGNORECASE)
-        candidates.extend((m.start(), m.end(), "PERSON", m.group()) for m in pattern.finditer(text))
+        collect(pattern, "PERSON")
     for category, pattern in PATTERNS:
-        candidates.extend((m.start(), m.end(), category, m.group()) for m in pattern.finditer(text))
+        collect(pattern, category)
     candidates.sort(key=lambda item: (item[0], -(item[1] - item[0])))
     selected = []
     for item in candidates:

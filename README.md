@@ -44,7 +44,8 @@ and database integration acceptance remain pending.
 ## Instructor workspace
 
 The Next.js workspace now adapts course/assignment selection, rubric display, writer reflections
-and feedback snippets into a fictional class review flow. A separate same-origin adapter reads
+and feedback snippets into a fictional class review flow with expected-roster coverage, explicit matching and reversible
+duplicate/exclusion decisions. A separate same-origin adapter reads
 protected course metadata when configured. See [run and integration boundaries](docs/instructor-workspace.md).
 T2.3 is in progress; student intake and release remain held.
 

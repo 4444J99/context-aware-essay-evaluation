@@ -14,13 +14,20 @@ npm run dev
 ```
 
 Open http://127.0.0.1:8766. The existing Python workbench at port 8765 is separate and preserved.
-Load the fictional class, select a writer, inspect the rubric and reflection, mark a synthetic
-privacy review, search snippets and insert one into an editable draft. Course/assignment changes
+Load the fictional class, resolve the unmatched record against an expected enrollment, inspect
+missing submissions, then load the duplicate case and exclude or restore a record. Select a writer,
+inspect the rubric and reflection, mark synthetic privacy review, search snippets and edit a draft. Course/assignment changes
 clear the selected writer. Drafts stay only in memory and reset on reload. No file/paste intake,
 model call, grade calculation, external delivery or persistent feedback write is present.
 
-The class denominator is the fixed selected-assignment fixture manifest, not a real roster.
-Unmatched records remain explicit exceptions; the UI cannot guess an enrollment. Completing
+The class denominator is an explicit fictional expected-enrollment manifest, separate from imported
+records. Composition expects three writers: one matched submission, one unmatched record and two
+initially missing writers. Explicitly matching the record to Writer 02 leaves Writer 04 missing.
+Repeated fixture imports preserve existing drafts and decisions. Duplicate submissions reduce
+coverage until one record is explicitly excluded; restoration brings the conflict back. Exclusion
+never deletes the source. Assignment-scoped matching rejects occupied or cross-scope enrollment.
+The in-memory decision log records import, match, exclusion and restoration; it is not a durable
+server audit. Unmatched records remain exceptions until an explicit decision; no automatic guess. Completing
 privacy review never clears rubric, assessment or release holds. No score is derived from history,
 reflection, snippets or class composition.
 
@@ -63,7 +70,10 @@ anonymous protected-data fallback exists.
 
 ## Verification and owned pending predicates
 
-Run `npm run typecheck` and `npm test` from the app. Tests cover component interaction in JSDOM,
+Run `npm run typecheck` and `npm test` from the app. Eleven component/contract tests pass.
+After host admission clears, run `npm run build`, `npx playwright install chromium` and
+`npm run test:browser`. Two Playwright flows are defined for class matching/duplicate resolution
+and writer separation/mobile layout; test discovery passed, but actual browser execution is pending. Tests cover component interaction in JSDOM,
 writer/course/assignment separation, holds after privacy review, snippet insertion, safe rubric
 rendering, malformed/unauthorized responses, pagination and gateway restrictions. JSDOM is not a
 real browser, visual review or database integration proof. Application and dependency declarations

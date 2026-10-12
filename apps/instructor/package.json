@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start --hostname 127.0.0.1 --port 8766",
     "typecheck": "tsc --noEmit",
-    "test": "tsx --test tests/*.test.tsx"
+    "test": "tsx --test tests/*.test.tsx",
+    "test:browser": "playwright test"
   },
   "dependencies": {
     "next": "16.4.0",
@@ -15,6 +16,7 @@
     "react-dom": "^19.2.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.64.0",
     "@types/jsdom": "^30.0.0",
     "@types/node": "^26.6.5",
     "@types/react": "^19.2.0",

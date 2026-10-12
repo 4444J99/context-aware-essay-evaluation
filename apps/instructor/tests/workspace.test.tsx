@@ -4,6 +4,7 @@ import { JSDOM } from "jsdom";
 import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { renderToStaticMarkup } from "react-dom/server";
+import { emptyIntake, importFictionalBatch, coverage, resolveRecord } from "../lib/intake";
 import { syntheticWorkspace, visibleSubmissions, updateSubmission, holds } from "../lib/workspace";
 import { loadCoursePage, ServiceError } from "../lib/backend";
 import { backendOrigin } from "../lib/gateway";
@@ -79,6 +80,14 @@ test("dashboard class selection, privacy holds, snippet insertion and writer iso
     await act(async () => checkbox.dispatchEvent(new dom.window.MouseEvent("click", { bubbles: true })));
     assert.ok(!container.textContent?.includes("Contextual privacy review required"));
     assert.ok(button("Release unavailable").disabled);
+    await select(2, "enroll-2");
+    assert.ok(container.textContent?.includes("2 of 3 expected writers have one submission"));
+    await click("Load fictional duplicate case");
+    assert.ok(container.textContent?.includes("1 duplicate enrollment groups"));
+    await click("Exclude essay-1-copy as duplicate");
+    assert.ok(container.textContent?.includes("0 duplicate enrollment groups · 1 excluded records"));
+    await click("Restore essay-1-copy");
+    assert.ok(container.textContent?.includes("1 duplicate enrollment groups"));
     await select(1, "revision"); assert.equal(container.querySelector("textarea"), null);
     await select(0, "rhetoric"); await click("Writer 03");
     assert.ok(container.textContent?.includes("welcoming question")); assert.ok(!container.textContent?.includes("shift workers"));
@@ -90,4 +99,45 @@ test("gateway rejects browser-controlled URLs and insecure production transport"
   assert.equal(backendOrigin("http://127.0.0.1:8767", false), "http://127.0.0.1:8767");
   assert.equal(backendOrigin("https://backend.example", true), "https://backend.example");
   for (const value of ["http://127.0.0.1:8767", "http://remote.example", "https://user:password@backend.example", "https://backend.example/path", "https://backend.example?target=x", "file:///tmp/backend"]) assert.throws(() => backendOrigin(value, true));
+});
+
+test("whole-class imports are repeat-safe and retain an explicit expected denominator", () => {
+  const empty = emptyIntake(); const loaded = importFictionalBatch(empty, "class");
+  assert.equal(empty.work.submissions.length, 0);
+  assert.equal(loaded.work.submissions.length, 3);
+  assert.strictEqual(importFictionalBatch(loaded, "class"), loaded);
+  assert.throws(() => importFictionalBatch(empty, "duplicate"));
+  assert.throws(() => importFictionalBatch(empty, "arbitrary-file" as "class"));
+  const report = coverage(loaded, "composition", "argument");
+  assert.equal(report.roster.length, 3); assert.equal(report.covered, 1);
+  assert.equal(report.unmatched.length, 1); assert.equal(report.missing.length, 2);
+});
+test("explicit matching is scope-bound, never overwrites existing enrollment and resets privacy", () => {
+  let state = importFictionalBatch(emptyIntake(), "class");
+  state.work = updateSubmission(state.work, "composition", "argument", "essay-2", { privacy: "reviewed", feedback: "Keep instructor draft" });
+  assert.throws(() => resolveRecord(state, "composition", "argument", "essay-2", { kind: "match", enrollmentId: "enroll-3" }));
+  assert.throws(() => resolveRecord(state, "composition", "argument", "essay-2", { kind: "match", enrollmentId: "enroll-1" }));
+  assert.throws(() => resolveRecord(state, "rhetoric", "audience", "essay-2", { kind: "exclude", reason: "duplicate" }));
+  const matched = resolveRecord(state, "composition", "argument", "essay-2", { kind: "match", enrollmentId: "enroll-2" });
+  const row = matched.work.submissions.find(s => s.id === "essay-2")!;
+  assert.equal(row.studentRef, "Writer 02"); assert.equal(row.privacy, "pending"); assert.equal(row.feedback, "Keep instructor draft");
+  assert.equal(coverage(matched, "composition", "argument").covered, 2);
+  assert.ok(holds(row).includes("Assessment route unqualified"));
+  assert.equal(matched.events.at(-1)?.action, "match");
+  assert.equal(matched.events.at(-1)?.scope, "composition/argument");
+});
+test("duplicate decisions preserve source, produce a log and reverse without hiding conflicts", () => {
+  const initial = importFictionalBatch(emptyIntake(), "class");
+  const duplicated = importFictionalBatch(initial, "duplicate");
+  assert.strictEqual(importFictionalBatch(duplicated, "duplicate"), duplicated);
+  assert.deepEqual(coverage(duplicated, "composition", "argument").duplicateEnrollmentIds, ["enroll-1"]);
+  const excluded = resolveRecord(duplicated, "composition", "argument", "essay-1-copy", { kind: "exclude", reason: "duplicate" });
+  assert.equal(excluded.work.submissions.length, duplicated.work.submissions.length);
+  assert.equal(coverage(excluded, "composition", "argument").duplicateEnrollmentIds.length, 0);
+  assert.equal(coverage(excluded, "composition", "argument").covered, 1);
+  assert.strictEqual(resolveRecord(excluded, "composition", "argument", "essay-1-copy", { kind: "exclude", reason: "duplicate" }), excluded);
+  const restored = resolveRecord(excluded, "composition", "argument", "essay-1-copy", { kind: "restore", reason: "review-again" });
+  assert.equal(coverage(restored, "composition", "argument").duplicateEnrollmentIds.length, 1);
+  assert.equal(restored.events.at(-1)?.sequence, 4);
+  assert.equal(restored.work.submissions.at(-1)?.text, duplicated.work.submissions.at(-1)?.text);
 });

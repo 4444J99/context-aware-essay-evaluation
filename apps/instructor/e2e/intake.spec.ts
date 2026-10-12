@@ -1,0 +1,37 @@
+import { test, expect } from "@playwright/test";
+test("class intake, explicit match and reversible duplicate resolution", async ({ page }) => {
+  const errors: string[] = []; page.on("pageerror", error => errors.push(error.message));
+  await page.goto("/");
+  await expect(page.getByRole("button", { name: "Connect protected courses" })).toBeDisabled();
+  await expect(page.getByRole("link", { name: "Sign in", exact: true })).toHaveCount(0);
+  await page.getByRole("button", { name: "Load fictional class", exact: true }).click();
+  await expect(page.getByText("1 of 3 expected writers have one submission", { exact: false })).toBeVisible();
+  await page.getByLabel("Match essay-2 to expected writer").selectOption("enroll-2");
+  await expect(page.getByText("2 of 3 expected writers have one submission", { exact: false })).toBeVisible();
+  await page.getByRole("button", { name: "Load fictional duplicate case" }).click();
+  await expect(page.getByText("1 duplicate enrollment groups", { exact: false })).toBeVisible();
+  await page.getByRole("button", { name: "Exclude essay-1-copy as duplicate", exact: true }).click();
+  await expect(page.getByText("0 duplicate enrollment groups · 1 excluded records", { exact: false })).toBeVisible();
+  await page.getByRole("button", { name: "Restore essay-1-copy", exact: true }).click();
+  await expect(page.getByText("1 duplicate enrollment groups", { exact: false })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Release unavailable" })).toBeDisabled();
+  await page.getByRole("button", { name: "Load fictional class", exact: true }).click();
+  await expect(page.getByText("3 records ·", { exact: false })).toBeVisible();
+  expect(errors).toEqual([]);
+});
+test("writer drafts, assignment scoping and mobile layout", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 }); await page.goto("/");
+  await page.getByRole("button", { name: "Load fictional class", exact: true }).click();
+  await page.getByLabel("Search snippets").fill("reasoning");
+  await page.getByRole("button", { name: "Insert reasoning snippet" }).click();
+  await expect(page.getByLabel("Instructor feedback draft")).toHaveValue("Explain how this example supports your claim.");
+  await page.getByRole("button", { name: "Unmatched fictional record", exact: false }).click();
+  await expect(page.getByLabel("Instructor feedback draft")).toHaveValue("");
+  await page.getByLabel("Assignment", { exact: true }).selectOption("revision");
+  await expect(page.getByLabel("Instructor feedback draft")).toHaveCount(0);
+  await page.getByLabel("Course", { exact: true }).selectOption("rhetoric");
+  await page.getByRole("button", { name: "Writer 03", exact: false }).click();
+  await expect(page.getByText("The invitation uses a welcoming question", { exact: false })).toBeVisible();
+  await expect(page.getByText("shift workers", { exact: false })).toHaveCount(0);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+});

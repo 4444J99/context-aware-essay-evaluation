@@ -49,6 +49,12 @@ duplicate/exclusion decisions. A separate same-origin adapter reads
 protected course metadata when configured. See [run and integration boundaries](docs/instructor-workspace.md).
 T2.3 is in progress; student intake and release remain held.
 
+## Extraction and privacy components
+
+Bounded TXT/DOCX/ZIP extraction and version-bound contextual passage review are implemented as
+internal components. PDF/OCR remains explicitly held; there is no student upload endpoint.
+See [contracts and qualification boundaries](docs/extraction-and-privacy.md).
+
 ## Delivery
 
 - [Approved implementation plan](.codex/plans/2026-10-12-context-aware-essay-evaluation.md)

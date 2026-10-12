@@ -115,9 +115,11 @@
           "depends_on": [
             "T1.3"
           ],
-          "status": "planned",
+          "status": "in_progress",
           "acceptance": "Bounded extraction preserves text and paragraph order; scanned, malformed, zip-bomb and ambiguous roster cases hold. Legacy import dry runs report exact source, imported, duplicate and held counts without writing historical student records.",
-          "source_review": "docs/legacy-review.md"
+          "source_review": "docs/legacy-review.md",
+          "implementation_pr": "https://github.com/4444J99/context-aware-essay-evaluation/pull/9",
+          "implementation_note": "Bounded synthetic extraction and source-bound passage privacy contracts implemented; PDF/OCR sandbox, protected persistence/review integration and adversarial qualification remain pending."
         },
         {
           "id": "T2.2",
@@ -126,8 +128,10 @@
           "depends_on": [
             "T2.1"
           ],
-          "status": "planned",
-          "acceptance": "Direct identifiers and contextual disclosures tested; uncertain cases hold; original passage mapping survives redactions."
+          "status": "in_progress",
+          "acceptance": "Direct identifiers and contextual disclosures tested; uncertain cases hold; original passage mapping survives redactions.",
+          "implementation_pr": "https://github.com/4444J99/context-aware-essay-evaluation/pull/9",
+          "implementation_note": "Bounded synthetic extraction and source-bound passage privacy contracts implemented; PDF/OCR sandbox, protected persistence/review integration and adversarial qualification remain pending."
         },
         {
           "id": "T2.3",

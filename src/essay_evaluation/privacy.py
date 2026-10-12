@@ -37,7 +37,7 @@ class ScrubbedDocument:
 
 
 PATTERNS = (
-    ("EMAIL", re.compile(r"(?<![\w.+-])[\w.+-]+@[\w.-]+\.[A-Za-z]{2,}(?![\w.-])")),
+    ("EMAIL", re.compile(r"(?<![\w.+-])[\w.+-]+@[\w.-]+\.[A-Za-z]{2,}(?![\w-])")),
     ("PHONE", re.compile(r"(?<!\w)(?:\+?1[ .-]?)?(?:\(\d{3}\)|\d{3})[ .-]?\d{3}[ .-]?\d{4}(?!\w)")),
     ("STUDENT_ID", re.compile(r"(?i)\b(?:student\s*(?:id|number)|sid)\s*[:#-]?\s*[A-Z0-9-]{4,}\b")),
 )
@@ -45,6 +45,8 @@ PATTERNS = (
 
 def scrub(text: str, known_identifiers: tuple[str, ...] = ()) -> ScrubbedDocument:
     # Normalize before assigning offsets; normalized text is the document-version basis.
+    if len(text) > 100_000 or len(known_identifiers) > 100 or any(len(value) > 256 for value in known_identifiers):
+        raise ValueError("input_limit")
     text = unicodedata.normalize("NFC", text)
     if len(text) > 100_000 or len(known_identifiers) > 100:
         raise ValueError("input_limit")

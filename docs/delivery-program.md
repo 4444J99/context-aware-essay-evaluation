@@ -181,3 +181,10 @@ The human authorized reusable dashboard integration while protected qualificatio
 T2.3 presentation/components proceed against synthetic fixtures and a separate protected metadata
 adapter. Its dependency and acceptance gates are unchanged. No student-processing path is enabled.
 See [workspace integration](instructor-workspace.md) and the T2.3 receipt.
+
+### Extraction/privacy component authorization — 2026-10-12
+
+The human authorized T2.1/T2.2 internal component work while build/browser and protected qualification
+are blocked. Bounded extraction and all-passage review contracts proceed with generated fixtures.
+This does not admit student uploads or waive parser isolation, PDF/OCR, contextual recall or
+authenticated persistence/review acceptance. See extraction-and-privacy.md.

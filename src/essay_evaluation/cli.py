@@ -5,7 +5,7 @@ import uvicorn
 
 
 def main():
-    parser = argparse.ArgumentParser(description="edu synthetic essay intake")
+    parser = argparse.ArgumentParser(description="edu essay evaluation services")
     parser.add_argument("command", choices=["serve", "serve-backend", "migrate"])
     parser.add_argument("--port", type=int, default=8765)
     args = parser.parse_args()

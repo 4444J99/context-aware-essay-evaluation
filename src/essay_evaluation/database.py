@@ -48,7 +48,7 @@ class Database:
     def __init__(self, dsn: str):
         settings = psycopg.conninfo.conninfo_to_dict(dsn)
         host = settings.get("host", "")
-        local = host.startswith("/") or host in {"127.0.0.1", "::1", "localhost"}
+        local = all(part.startswith("/") or part in {"127.0.0.1", "::1", "localhost"} for part in host.split(","))
         if not host:
             raise ValueError("explicit_database_host_required")
         if (not local or settings.get("hostaddr")) and settings.get("sslmode") != "verify-full":
@@ -62,6 +62,9 @@ class Database:
                 raise RuntimeError("unsafe_database_role")
             if conn.execute("SELECT EXISTS (SELECT 1 FROM pg_tables WHERE schemaname='public' AND pg_has_role(current_user, tableowner, 'USAGE'))").fetchone()[0]:
                 raise RuntimeError("runtime_role_must_not_own_tables")
+            protected = conn.execute("SELECT count(*) FROM pg_class JOIN pg_namespace ON pg_namespace.oid=pg_class.relnamespace WHERE nspname='public' AND relname = ANY(%s) AND relrowsecurity AND relforcerowsecurity", (["instructors", "terms", "courses", "sections", "enrollments", "external_references"],)).fetchone()[0]
+            if protected != 6:
+                raise RuntimeError("schema_row_security_required")
             rows = conn.execute("SELECT revision, checksum FROM schema_revisions").fetchall()
             if rows != [(REVISION, migration_digest())]:
                 raise RuntimeError("schema_revision_mismatch")

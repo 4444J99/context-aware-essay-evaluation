@@ -54,7 +54,7 @@ def create_backend(database: Database, verifier: TokenVerifier) -> FastAPI:
         database.verify()
         yield
 
-    app = FastAPI(title="edu Protected Backend", version="0.2.0", lifespan=lifespan)
+    app = FastAPI(title="edu Protected Backend", version="0.2.0", lifespan=lifespan, docs_url=None, redoc_url=None)
     bearer = HTTPBearer(auto_error=False)
 
     def scoped(credentials: HTTPAuthorizationCredentials | None = Depends(bearer)):

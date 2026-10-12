@@ -32,3 +32,31 @@ backend qualification, through the authenticated API described in docs/protected
 
 The isolated worktree is retained for the open implementation PR and existing synthetic demo.
 No merge, deployed backend, student-processing approval or completed project is claimed.
+
+## CI admission observation
+
+Pushed implementation f308226fb19118adb19cb933e6f870fe9cfcdfaf. Verify run
+https://github.com/4444J99/context-aware-essay-evaluation/actions/runs/38299555855
+finished without starting the foundation job. GitHub's annotation said recent account payments
+had failed or a spending limit needed to be increased; no test logs exist. This is a runner
+admission failure, not a failing PostgreSQL predicate or verified account diagnosis. No account
+change, spending increase, CI rerun or repeated merge submission was made.
+
+External gate owner: P1 issue #2 / GitHub account Actions admission. Completion predicate: the
+existing full suite executes on a disposable PostgreSQL service and passes. After that gate is
+resolved, next command: `gh run rerun 38299555855 --repo 4444J99/context-aware-essay-evaluation`
+for the recorded source revision, or the current Verify job if a newer revision supersedes it.
+Local alternative remains the admission-gated native cluster; do not bypass host rejection.
+
+A subsequent source review added a startup check requiring all six application tables to have
+forced RLS, and removed unavailable Swagger HTML routes under the API's strict content policy.
+These changes do not establish database acceptance.
+
+Final lightweight additions: signed-token cases with missing MFA/expiry claims were added; the
+identity shard passed all 10 cases. The API/transport shard passed 2 cases after the startup/RLS
+review, and Python source compilation passed. Source-only amendments leave unchanged green
+shards as prior evidence; the PostgreSQL integration boundary remains unverified.
+
+Wheel packaging passed and contains both SQL migration directions and protected backend modules.
+A final multi-host transport case ensures a Unix-socket fallback cannot exempt a remote host
+from verified TLS. The implicated transport shard passed. No merge submission was repeated.

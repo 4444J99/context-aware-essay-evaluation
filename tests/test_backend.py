@@ -42,7 +42,7 @@ def signing():
 @pytest.mark.parametrize("changes", [
     {"iss": "https://wrong.example.test"}, {"aud": "wrong"},
     {"exp": 1}, {"iat": 4102444800}, {"sub": ""},
-    {"amr": ["pwd"]}, {"amr": "mfa"},
+    {"amr": ["pwd"]}, {"amr": "mfa"}, {"amr": None}, {"exp": None},
 ])
 def test_identity_rejections(signing, changes):
     verifier, token = signing  # allow-secret: public-key client or generated synthetic test-token helper; no credential literal
@@ -234,4 +234,6 @@ def test_database_transport_configuration():
         Database("host=db.example.test dbname=edu")
     with pytest.raises(ValueError, match="verified_database_tls"):
         Database("host=localhost hostaddr=192.0.2.1 dbname=edu")
+    with pytest.raises(ValueError, match="verified_database_tls"):
+        Database("host=/tmp,db.example.test dbname=edu")
     Database("host=db.example.test dbname=edu sslmode=verify-full")

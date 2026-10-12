@@ -29,7 +29,7 @@ class TokenVerifier:
         # Only this operator-configured URL is fetched; token jku/x5u never select a URL.
         self.jwks = PyJWKClient(jwks_url, timeout=5, lifespan=300)
 
-    def verify(self, token: str) -> Identity:  # allow-secret: public-key client or generated synthetic test-token helper; no credential literal
+    def verify(self, token: str) -> Identity:  # allow-secret: token parameter only; no credential literal
         if len(token) > 16384:
             raise AuthenticationError("invalid_identity_token")
         try:

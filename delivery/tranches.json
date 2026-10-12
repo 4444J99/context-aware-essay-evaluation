@@ -81,8 +81,10 @@
           "depends_on": [
             "T1.1"
           ],
-          "status": "planned",
-          "acceptance": "Private login works; content worker cannot decrypt identity; backup restore is demonstrated."
+          "status": "in_progress",
+          "acceptance": "Private login works; content worker cannot decrypt identity; backup restore is demonstrated.",
+          "implementation_pr": "https://github.com/4444J99/context-aware-essay-evaluation/pull/9",
+          "implementation_note": "Filesystem envelope vault and mocked OIDC/PKCE browser sessions implemented; hosted KMS isolation, live issuer and PostgreSQL integration qualification pending."
         },
         {
           "id": "T1.3",

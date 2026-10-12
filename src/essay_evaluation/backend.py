@@ -5,7 +5,7 @@ import os
 from typing import Literal
 from uuid import UUID, uuid4
 
-from fastapi import Depends, FastAPI, HTTPException, Query
+from fastapi import Depends, FastAPI, HTTPException, Query, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -48,7 +48,7 @@ class ReferenceInput(Input):
     target_id: UUID
 
 
-def create_backend(database: Database, verifier: TokenVerifier) -> FastAPI:
+def create_backend(database: Database, verifier: TokenVerifier, login=None) -> FastAPI:
     @asynccontextmanager
     async def lifespan(app):
         database.verify()
@@ -57,11 +57,11 @@ def create_backend(database: Database, verifier: TokenVerifier) -> FastAPI:
     app = FastAPI(title="edu Protected Backend", version="0.2.0", lifespan=lifespan, docs_url=None, redoc_url=None)
     bearer = HTTPBearer(auto_error=False)
 
-    def scoped(credentials: HTTPAuthorizationCredentials | None = Depends(bearer)):
-        if credentials is None:
+    def scoped(request: Request, credentials: HTTPAuthorizationCredentials | None = Depends(bearer)):
+        if credentials is None and login is None:
             raise HTTPException(401, "authentication_required", headers={"WWW-Authenticate": "Bearer"})
         try:
-            identity = verifier.verify(credentials.credentials)
+            identity = verifier.verify(credentials.credentials) if credentials else login.identity(request)[0]
         except AuthenticationError:
             raise HTTPException(401, "invalid_identity_or_mfa", headers={"WWW-Authenticate": "Bearer"}) from None
         try:
@@ -107,7 +107,8 @@ def create_backend(database: Database, verifier: TokenVerifier) -> FastAPI:
     @app.get("/health")
     def health():
         return {"product": "edu", "component": "essay-evaluation", "mode": "protected_metadata",
-                "real_student_data_enabled": False, "inference_enabled": False}
+                "real_student_data_enabled": False, "inference_enabled": False,
+                "browser_login": "configured" if login else "unconfigured"}
 
     @app.get("/v1/session")
     def session(scope=Depends(scoped, scope="function")):
@@ -184,11 +185,39 @@ def create_backend(database: Database, verifier: TokenVerifier) -> FastAPI:
         require(conn, "courses", course_id, owner)
         return page(conn.execute("SELECT id,course_id,source,kind,external_id,target_id FROM external_references WHERE instructor_id=%s AND course_id=%s AND (%s::uuid IS NULL OR id>%s) ORDER BY id LIMIT 101", (owner, course_id, after, after)).fetchall())
 
+    if login is not None:
+        from .login import install_login_routes
+        install_login_routes(app, login)
     return app
 
 
 def configured_backend() -> FastAPI:
     # Required operator-owned values: there is no anonymous or demo fallback.
-    return create_backend(Database(os.environ["EDU_DATABASE_URL"]), TokenVerifier(
-        os.environ["EDU_OIDC_ISSUER"], os.environ["EDU_OIDC_AUDIENCE"], os.environ["EDU_OIDC_JWKS_URL"],
-    ))
+    database = Database(os.environ["EDU_DATABASE_URL"])
+    verifier = TokenVerifier(os.environ["EDU_OIDC_ISSUER"], os.environ["EDU_OIDC_AUDIENCE"], os.environ["EDU_OIDC_JWKS_URL"])
+    enabled = os.environ.get("EDU_LOGIN_ENABLED", "false")
+    if enabled not in {"true", "false"}:
+        raise ValueError("login_enabled_must_be_explicit_boolean")
+    login = None
+    if enabled == "true":
+        import base64
+        import json
+        from pathlib import Path
+        import stat
+        from .durable_vault import DomainKeyRing, DurableVault
+        from .sessions import SessionStore
+        from .login import BrowserLogin, LoginConfig
+        root = Path(os.environ["EDU_SESSION_ROOT"])
+        root.mkdir(mode=0o700, exist_ok=True)
+        info = root.lstat()
+        if not stat.S_ISDIR(info.st_mode) or info.st_uid != os.geteuid() or info.st_mode & 0o077:
+            raise ValueError("private_session_root_required")
+        supplied = json.loads(os.environ["EDU_SESSION_KEYS_JSON"])
+        keys = {version: base64.b64decode(value, validate=True) for version, value in supplied.items()}
+        vault = DurableVault(root / "vault", DomainKeyRing("session", os.environ["EDU_SESSION_KEY_VERSION"], keys))
+        client_id = os.environ["EDU_OIDC_CLIENT_ID"]
+        login = BrowserLogin(LoginConfig(os.environ["EDU_APP_ORIGIN"], os.environ["EDU_OIDC_AUTHORIZATION_URL"],
+                                         os.environ["EDU_OIDC_TOKEN_URL"], client_id, os.environ.get("EDU_OIDC_CLIENT_SECRET")),
+                             SessionStore(root / "index", vault), verifier,
+                             TokenVerifier(verifier.issuer, client_id, os.environ["EDU_OIDC_JWKS_URL"]), database)
+    return create_backend(database, verifier, login)

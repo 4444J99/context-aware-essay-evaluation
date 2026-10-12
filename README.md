@@ -36,6 +36,11 @@ A separate PostgreSQL API now implements instructor-scoped terms, courses, secti
 enrollments, with signed-token/MFA verification and row-level security. Database integration
 qualification is pending; real student processing remains held. See [setup and API](docs/protected-backend.md).
 
+A persistent envelope-encrypted vault and OIDC/PKCE browser login are implemented with
+synthetic tests. Tokens remain server-side; browser writes require origin and CSRF checks.
+See [vault and login boundaries](docs/vault-and-login.md). Hosted KMS, live identity-provider
+and database integration acceptance remain pending.
+
 ## Delivery
 
 - [Approved implementation plan](.codex/plans/2026-10-12-context-aware-essay-evaluation.md)

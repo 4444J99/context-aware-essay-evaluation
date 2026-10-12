@@ -29,7 +29,7 @@ class TokenVerifier:
         # Only this operator-configured URL is fetched; token jku/x5u never select a URL.
         self.jwks = PyJWKClient(jwks_url, timeout=5, lifespan=300)
 
-    def verify(self, token: str) -> Identity:  # allow-secret: token parameter only; no credential literal
+    def verify_claims(self, token: str) -> dict:  # allow-secret: token parameter only; no credential literal
         if len(token) > 16384:
             raise AuthenticationError("invalid_identity_token")
         try:
@@ -48,8 +48,12 @@ class TokenVerifier:
                 raise AuthenticationError("mfa_required")
             if not isinstance(claims["sub"], str) or not claims["sub"] or len(claims["sub"]) > 512:
                 raise AuthenticationError("invalid_identity_token")
-            return Identity(self.issuer, claims["sub"])
+            return claims
         except AuthenticationError:
             raise
         except (jwt.PyJWTError, ValueError, TypeError, KeyError) as exc:
             raise AuthenticationError("invalid_identity_token") from exc
+
+    def verify(self, token: str) -> Identity:  # allow-secret: token parameter only; no credential literal
+        claims = self.verify_claims(token)
+        return Identity(self.issuer, claims["sub"])

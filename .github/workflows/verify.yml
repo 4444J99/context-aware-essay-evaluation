@@ -50,3 +50,10 @@ jobs:
       - run: npm run build
       - run: npx playwright install --with-deps chromium
       - run: npm run test:browser
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: instructor-browser-failure
+          path: apps/instructor/test-results/
+          retention-days: 7
+          if-no-files-found: ignore

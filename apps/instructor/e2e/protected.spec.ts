@@ -20,13 +20,13 @@ test("protected roster history is read-only and clears when assignment changes",
   const panel = page.getByRole("region", { name: "Protected intake and passage review" });
   await panel.getByRole("button", { name: "Load authorized intake courses" }).click();
   await panel.getByRole("button", { name: "Load protected assignment and exception queue" }).click();
-  await panel.getByLabel("Assignment", { exact: true }).selectOption(id);
+  await panel.getByRole("combobox", { name: "Protected assignment", exact: true }).selectOption(id);
   await panel.getByRole("button", { name: "Review roster history" }).click();
   await expect(panel.getByText("Current roster version 1.", { exact: false })).toBeVisible();
   await panel.getByText("Version 1 ·", { exact: false }).click();
   await expect(panel.getByText("Added: 0 · Removed: 1")).toBeVisible();
   await expect(panel.getByText(`Removed ${id}`, { exact: true })).toBeVisible();
-  await panel.getByLabel("Assignment", { exact: true }).selectOption(other);
+  await panel.getByRole("combobox", { name: "Protected assignment", exact: true }).selectOption(other);
   await expect(panel.getByRole("heading", { name: "Roster history", exact: true })).toHaveCount(0);
   expect(writes).toBe(0); expect(errors).toEqual([]);
 });

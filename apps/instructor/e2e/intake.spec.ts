@@ -27,9 +27,9 @@ test("writer drafts, assignment scoping and mobile layout", async ({ page }) => 
   await expect(page.getByLabel("Instructor feedback draft")).toHaveValue("Explain how this example supports your claim.");
   await page.getByRole("button", { name: "Unmatched fictional record", exact: false }).click();
   await expect(page.getByLabel("Instructor feedback draft")).toHaveValue("");
-  await page.getByLabel("Assignment", { exact: true }).selectOption("revision");
+  await page.getByRole("combobox", { name: "Assignment", exact: true }).selectOption("revision");
   await expect(page.getByLabel("Instructor feedback draft")).toHaveCount(0);
-  await page.getByLabel("Course", { exact: true }).selectOption("rhetoric");
+  await page.getByRole("combobox", { name: "Course", exact: true }).selectOption("rhetoric");
   await page.getByRole("button", { name: "Writer 03", exact: false }).click();
   await expect(page.getByText("The invitation uses a welcoming question", { exact: false })).toBeVisible();
   await expect(page.getByText("shift workers", { exact: false })).toHaveCount(0);

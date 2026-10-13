@@ -253,8 +253,12 @@ def test_postgres_protected_mapping_roster_and_rls(database, signing, service):
     with TestClient(create_backend(db, verifier, intake_service=service)) as client:
         course, _ = create_course(client, a)
         base = f"/v1/courses/{course['id']}"
-        section = client.post(base + "/sections", headers=a, json={"label": "Synthetic section"}).json()
-        member = client.post(base + f"/sections/{section['id']}/enrollments", headers=a, json={"student_ref": str(uuid4())}).json()
+        section_response = client.post(base + "/sections", headers=a, json={"label": "Synthetic section"})
+        assert section_response.status_code == 201, section_response.text
+        section = section_response.json()
+        member_response = client.post(base + f"/sections/{section['id']}/enrollments", headers=a, json={})
+        assert member_response.status_code == 201, member_response.text
+        member = member_response.json()
         created = client.post(base + "/assignments", headers=a, json={"section_id": section["id"]})
         assert created.status_code == 201, created.text
         assignment = created.json()

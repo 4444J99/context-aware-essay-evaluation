@@ -70,3 +70,22 @@ export async function updateRoster(course: string, assignment: string, generatio
   if (!result || result.id !== assignment || result.roster_generation !== generation + 1 || !Number.isSafeInteger(result.invalidated_submissions) || result.invalidated_submissions < 0 || result.invalidated_submissions > 1000) throw new IntakeError("Protected roster response invalid.");
   return result;
 }
+
+export type RosterVersion = { generation: number; enrollment_ids: string[]; created_at: string };
+export type RosterHistory = { assignment_id: string; course_id: string; current_generation: number; items: RosterVersion[]; older_versions_available: boolean; next_before: number | null };
+export async function readRosterHistory(course: string, assignment: string, before: number | null, signal: AbortSignal, transport: typeof fetch = fetch): Promise<RosterHistory> {
+  if (before !== null && (!Number.isSafeInteger(before) || before < 1 || before > 2147483647)) throw new IntakeError("Invalid history cursor.");
+  const value = await call(`/v1/courses/${identifier(course)}/assignments/${identifier(assignment)}/roster${before === null ? "" : `?before=${before}`}`, undefined, signal, transport) as RosterHistory;
+  if (!value || value.assignment_id !== assignment || value.course_id !== course || !Number.isSafeInteger(value.current_generation) || value.current_generation < 0 || value.current_generation > 2147483647 || !Array.isArray(value.items) || value.items.length > 100 || typeof value.older_versions_available !== "boolean") throw new IntakeError("Protected roster history invalid.");
+  let previous = before ?? value.current_generation + 1;
+  for (const row of value.items) {
+    if (!row || !Number.isSafeInteger(row.generation) || row.generation < 0 || row.generation >= previous || row.generation > value.current_generation || !Array.isArray(row.enrollment_ids) || row.enrollment_ids.length > 1000 || new Set(row.enrollment_ids).size !== row.enrollment_ids.length || !row.enrollment_ids.every(id => typeof id === "string" && uuid.test(id)) || typeof row.created_at !== "string" || row.created_at.length > 64 || !Number.isFinite(Date.parse(row.created_at))) throw new IntakeError("Protected roster version invalid.");
+    previous = row.generation;
+  }
+  if (value.older_versions_available ? value.items.length !== 100 || value.next_before !== previous || previous < 1 : value.next_before !== null) throw new IntakeError("Protected history pagination invalid.");
+  return value;
+}
+export function rosterChanges(newer: RosterVersion, older: RosterVersion) {
+  const prior = new Set(older.enrollment_ids), next = new Set(newer.enrollment_ids);
+  return { added: newer.enrollment_ids.filter(id => !prior.has(id)), removed: older.enrollment_ids.filter(id => !next.has(id)) };
+}

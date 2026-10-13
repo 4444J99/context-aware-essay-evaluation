@@ -2,7 +2,8 @@
 
 Global policy at ~/AGENTS.md applies when present.
 
-This private repository owns the evaluator application. 4444J99/edu-organism owns course operations.
+This public source repository owns the evaluator application. 4444J99/edu-organism owns course operations.
+Public source visibility does not authorize publishing student records, vault contents or credentials.
 The approved design is .codex/plans/2026-10-12-context-aware-essay-evaluation.md.
 Execution order and acceptance gates live in docs/delivery-program.md and delivery/tranches.json.
 

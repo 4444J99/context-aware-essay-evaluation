@@ -182,6 +182,7 @@ test("protected dashboard persists a fixture and submits explicit passage decisi
     if (url === "/v1/courses") return Response.json({ items: [{ id, term_id: id, title: "Protected synthetic course" }], next_cursor: null });
     if (url === "/auth/session") return Response.json({ product: "edu", csrf_token: "synthetic-csrf-value-000000000" });
     if (url.endsWith("/intake-workspace")) return Response.json({ assignments: [{ id, section_id: id, label: "Fictional assignment", roster_generation: 0 }], sections: [{ id, label: "A" }], enrollments: [{ id, section_id: id }], expected: [{ assignment_id: id, enrollment_id: id }], missing: [], submissions: [{ ...protectedView, review_generation: generation }] });
+    if (url.endsWith("/roster") && options?.method !== "POST") return Response.json({ assignment_id: id, course_id: id, current_generation: 1, items: [{ generation: 1, enrollment_ids: [], created_at: "2026-10-13T00:00:00Z" }, { generation: 0, enrollment_ids: [id], created_at: "2026-10-12T00:00:00Z" }], older_versions_available: false, next_before: null });
     if (url.endsWith("/roster")) {
       writes++; const body = JSON.parse(options?.body as string); assert.equal(body.expected_generation, 0); assert.deepEqual(body.enrollment_ids, []);
       return Response.json({ id, roster_generation: 1, invalidated_submissions: 1 });
@@ -212,6 +213,13 @@ test("protected dashboard persists a fixture and submits explicit passage decisi
     await act(async () => { member.click(); });
     await click("Record new roster version");
     assert.equal(writes, 3); assert.ok(container.textContent?.includes("New roster version recorded"));
+    await click("Review roster history");
+    assert.ok(container.textContent?.includes("Current roster version 1"));
+    assert.ok(container.textContent?.includes("Removed: 1"));
+    assert.ok(container.textContent?.includes("Initial roster snapshot"));
+    assert.equal(writes, 3);
+    await click("Load protected assignment and exception queue");
+    assert.equal(container.querySelector("#roster-history-title"), null);
   } finally { await act(async () => root.unmount()); globalThis.fetch = previous; dom.window.close(); }
 });
 
@@ -242,4 +250,18 @@ test("roster adapter sends explicit members and generation without retrying stal
   assert.equal(writes, 1);
   await assert.rejects(updateRoster(id, id, 3, [id,id], new AbortController().signal, transport), IntakeError);
   assert.equal(writes, 1);
+});
+
+test("roster history is scope-bound, bounded and strictly ordered with validated pagination", async () => {
+  const { readRosterHistory, rosterChanges } = await import("../lib/protected-intake");
+  const entry = { generation: 0, enrollment_ids: [id], created_at: "2026-10-13T00:00:00Z" };
+  const valid = { assignment_id: id, course_id: id, current_generation: 0, items: [entry], older_versions_available: false, next_before: null };
+  const signal = new AbortController().signal;
+  const transport = (value: unknown) => (async (_path: string | URL | Request, options?: RequestInit) => { assert.equal(options?.method, "GET"); assert.equal(options?.cache, "no-store"); return Response.json(value); }) as typeof fetch;
+  assert.equal((await readRosterHistory(id, id, null, signal, transport(valid))).items.length, 1);
+  for (const value of [{ ...valid, assignment_id: "wrong" }, { ...valid, course_id: "wrong" }, { ...valid, items: [entry, entry] }, { ...valid, items: [{ ...entry, enrollment_ids: [id,id] }] }, { ...valid, next_before: 0 }, { ...valid, older_versions_available: true }, { ...valid, items: [{ ...entry, created_at: "invalid" }] }]) await assert.rejects(readRosterHistory(id, id, null, signal, transport(value)), IntakeError);
+  const paged = { ...valid, current_generation: 101, items: Array.from({ length: 100 }, (_,i) => ({ ...entry, generation: 101-i })), older_versions_available: true, next_before: 2 };
+  assert.equal((await readRosterHistory(id, id, null, signal, transport(paged))).next_before, 2);
+  await assert.rejects(readRosterHistory(id, id, 1, signal, transport({ ...valid, items: [{ ...entry, generation: 1 }] })), IntakeError);
+  assert.deepEqual(rosterChanges({ ...entry, generation: 1, enrollment_ids: [] }, entry), { added: [], removed: [id] });
 });

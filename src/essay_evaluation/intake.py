@@ -124,11 +124,16 @@ class SqlIntakeRepository:
             raise IntakeConflict("workspace_size_limit")
         return rows
 
-    def roster_history(self, assignment):
-        if self.roster_assignment(assignment) is None:
+    def roster_history(self, assignment, before=None):
+        self.require_course()
+        current = self.roster_assignment(assignment)
+        if current is None:
             raise LookupError("record_not_found")
-        rows = self.conn.execute("SELECT generation,enrollment_ids FROM assignment_roster_versions WHERE assignment_id=%s AND course_id=%s AND instructor_id=%s ORDER BY generation DESC LIMIT 101", (assignment, self.course, self.owner)).fetchall()
-        return {"items": rows[:100], "older_versions_available": len(rows) > 100}
+        rows = self.conn.execute("SELECT generation,enrollment_ids,created_at FROM assignment_roster_versions WHERE assignment_id=%s AND course_id=%s AND instructor_id=%s AND (%s::integer IS NULL OR generation < %s) ORDER BY generation DESC LIMIT 101", (assignment, self.course, self.owner, before, before)).fetchall()
+        page = rows[:100]
+        return {"assignment_id": assignment, "course_id": self.course, "current_generation": current["roster_generation"],
+                "items": page, "older_versions_available": len(rows) > 100,
+                "next_before": page[-1]["generation"] if len(rows) > 100 else None}
 
     def audit(self, row, action, private_object):
         self.conn.execute("INSERT INTO intake_events (id,instructor_id,course_id,submission_id,generation,action,private_object) VALUES (%s,%s,%s,%s,%s,%s,%s)", (uuid4(), self.owner, self.course, row["id"], row["review_generation"], action, private_object))

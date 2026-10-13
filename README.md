@@ -1,6 +1,6 @@
 # edu essay evaluation
 
-A private component of [edu](https://github.com/4444J99/edu-organism) for rubric-grounded evaluation,
+A public source component of [edu](https://github.com/4444J99/edu-organism) for rubric-grounded evaluation,
 personal feedback, and semester-long writing development across composition sections.
 
 **Current build: synthetic intake foundation.** It runs a local workbench with invented essays,

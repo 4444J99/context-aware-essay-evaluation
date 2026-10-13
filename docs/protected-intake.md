@@ -138,3 +138,16 @@ which stays owned by the existing retention/reconciliation tranche.
 The protected dashboard shows same-section enrollment checkboxes and records a new roster
 version explicitly. Coverage and intake generations reload after success; conflicts never retry
 writes automatically. PDF/OCR, parser, route and release qualification are unchanged.
+
+
+## Protected roster history review
+
+The dashboard reads scope-bound roster history, shows membership and additions/removals against
+the preceding version, and never changes the active roster when viewing history. The protected
+endpoint returns assignment/course scope, current generation, timestamps and at most 100 versions,
+with a validated `before` cursor for older pages. Dashboard pages overlap by one version so the
+boundary change can be compared. Backend locks preserve a consistent generation/history view;
+the browser rejects wrong scope, unordered/duplicate versions, malformed members and invalid
+pagination. Scope changes, refresh, errors and successful roster writes clear prior history.
+A newer current generation in history does not authorize writing with a stale workspace generation;
+refresh the protected queue before updating. Public source visibility does not relax any route.

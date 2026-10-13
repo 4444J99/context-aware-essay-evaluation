@@ -2,7 +2,7 @@
 from typing import Literal
 from uuid import UUID
 
-from fastapi import Depends, HTTPException
+from fastapi import Depends, HTTPException, Query
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -91,5 +91,5 @@ def install_intake_routes(app, scoped, service):
         return run(scope, course_id, lambda repo: service.update_roster(repo, assignment_id, body.expected_generation, body.enrollment_ids))
 
     @app.get("/v1/courses/{course_id}/assignments/{assignment_id}/roster")
-    def roster_history(course_id: UUID, assignment_id: UUID, scope=Depends(scoped, scope="function")):
-        return run(scope, course_id, lambda repo: repo.roster_history(assignment_id))
+    def roster_history(course_id: UUID, assignment_id: UUID, before: int | None = Query(default=None, ge=1, le=2_147_483_647), scope=Depends(scoped, scope="function")):
+        return run(scope, course_id, lambda repo: repo.roster_history(assignment_id, before))

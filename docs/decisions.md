@@ -40,3 +40,12 @@ conduct_rejected / INVALID_ARGUMENT. No child was spawned and no reservation is 
 This attempt proceeds as direct human-authorized work in its isolated writer-admitted worktree.
 Next delegation owner: Limen conduct integration; predicate: schema-valid packet receives a run
 and child reservation; next command: limen conduct submit --packet <validated-packet>.
+
+
+## Public source visibility (2026-10-13)
+
+The owner made context-aware-essay-evaluation public; GitHub visibility was verified live.
+The source remains part of edu. Public code is not a public student-data service: only invented
+fixtures belong in Git, and student records, identity/content/session vaults, credentials and
+private operational data stay outside the repository. Existing synthetic-only and release gates
+remain in force. Historical receipts describing earlier private visibility retain their provenance.

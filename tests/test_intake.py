@@ -274,6 +274,11 @@ def test_postgres_protected_mapping_roster_and_rls(database, signing, service):
         assert client.post(roster_path, headers=a, json=replacement).status_code == 409
         history = client.get(roster_path, headers=a).json()
         assert [r["generation"] for r in history["items"]] == [1,0]
+        assert history["assignment_id"] == assignment["id"] and history["course_id"] == course["id"]
+        assert history["current_generation"] == 1 and history["next_before"] is None
+        assert client.get(roster_path + "?before=1", headers=a).json()["items"][0]["generation"] == 0
+        assert client.get(roster_path + "?before=0", headers=a).status_code == 422
+        assert client.get(roster_path, headers=b).status_code == 404
         held = client.get(base + f"/intake/{first['id']}/review", headers=a).json()
         assert held["review_generation"] == 2 and "roster_membership_removed" in held["holds"]
         assert client.post(roster_path, headers=a, json={"expected_generation": 1, "enrollment_ids": [member["id"]]}).status_code == 200
@@ -309,3 +314,21 @@ def test_roster_updates_preserve_matches_invalidate_review_and_hold_removed_memb
     service.update_roster(repo, assignment, 1, [enrollment, added])
     assert "roster_membership_removed" not in repo.get(first["id"])["holds"]
     assert repo.get(first["id"])["state"] == "privacy_pending" and len(repo.history) == 2
+
+
+def test_roster_history_repository_scopes_and_pages_without_source_content():
+    from essay_evaluation.intake import SqlIntakeRepository
+    from unittest.mock import Mock
+    owner, course, assignment = uuid4(), uuid4(), uuid4()
+    conn = Mock(); rows = [{"generation": n, "enrollment_ids": [], "created_at": "2026-10-13T00:00:00Z"} for n in range(200,99,-1)]
+    conn.execute.return_value.fetchall.return_value = rows
+    repo = SqlIntakeRepository(conn, owner, course)
+    repo.require_course = Mock(); repo.roster_assignment = Mock(return_value={"roster_generation": 201})
+    result = repo.roster_history(assignment, 201)
+    assert len(result["items"]) == 100 and result["next_before"] == 101
+    assert result["assignment_id"] == assignment and result["course_id"] == course
+    sql, parameters = conn.execute.call_args.args
+    assert "generation <" in sql and parameters == (assignment, course, owner, 201, 201)
+    assert "original_object" not in str(result)
+    repo.roster_assignment.return_value = None
+    with pytest.raises(LookupError): repo.roster_history(assignment)

@@ -42,13 +42,14 @@ export async function submitReview(view: ReviewView, decisions: Record<number, D
   return value;
 }
 
-export type Workspace = { assignments: { id: string; section_id: string; label: string }[]; sections: { id: string; label: string }[]; expected: { assignment_id: string; enrollment_id: string }[]; missing: { assignment_id: string; enrollment_id: string }[]; submissions: IntakeView[] };
+export type Workspace = { assignments: { id: string; section_id: string; label: string; roster_generation: number }[]; sections: { id: string; label: string }[]; expected: { assignment_id: string; enrollment_id: string }[]; missing: { assignment_id: string; enrollment_id: string }[]; submissions: IntakeView[]; enrollments: { id: string; section_id: string }[] };
 export async function readWorkspace(course: string, signal: AbortSignal, transport: typeof fetch = fetch): Promise<Workspace> {
   const value = await call(`/v1/courses/${identifier(course)}/intake-workspace`, undefined, signal, transport) as Workspace;
-  if (!value || ![value.assignments, value.sections, value.expected, value.missing, value.submissions].every(a => Array.isArray(a) && a.length <= 1000)) throw new IntakeError("Protected workspace response invalid.");
-  for (const a of value.assignments) { identifier(a.id); identifier(a.section_id); if (typeof a.label !== "string" || a.label.length > 120) throw new IntakeError("Invalid assignment."); }
+  if (!value || ![value.assignments, value.sections, value.expected, value.missing, value.submissions, value.enrollments].every(a => Array.isArray(a) && a.length <= 1000)) throw new IntakeError("Protected workspace response invalid.");
+  for (const a of value.assignments) { identifier(a.id); identifier(a.section_id); if (typeof a.label !== "string" || a.label.length > 120 || !Number.isSafeInteger(a.roster_generation) || a.roster_generation < 0) throw new IntakeError("Invalid assignment."); }
   for (const a of value.sections) { identifier(a.id); if (typeof a.label !== "string" || a.label.length > 120) throw new IntakeError("Invalid section."); }
   for (const a of [...value.expected, ...value.missing]) { identifier(a.assignment_id); identifier(a.enrollment_id); }
+  for (const e of value.enrollments) { identifier(e.id); identifier(e.section_id); }
   for (const row of value.submissions) validate(row, course);
   return value;
 }
@@ -61,4 +62,11 @@ export async function resolveIntake(view: IntakeView, action: "mapping" | "exclu
   const value = validate(await call(`/v1/courses/${identifier(view.course_id)}/intake/${identifier(view.id)}/resolution`, body, signal, transport), view.course_id);
   if (value.id !== view.id || value.source_revision !== view.source_revision || value.review_generation !== view.review_generation + 1) throw new IntakeError("Protected resolution response invalid.");
   return value;
+}
+
+export async function updateRoster(course: string, assignment: string, generation: number, members: string[], signal: AbortSignal, transport: typeof fetch = fetch) {
+  if (!Number.isSafeInteger(generation) || generation < 0 || members.length > 1000 || new Set(members).size !== members.length) throw new IntakeError("Invalid roster update.");
+  const result = await call(`/v1/courses/${identifier(course)}/assignments/${identifier(assignment)}/roster`, { expected_generation: generation, enrollment_ids: members.map(identifier) }, signal, transport) as { id: string; roster_generation: number; invalidated_submissions: number };
+  if (!result || result.id !== assignment || result.roster_generation !== generation + 1 || !Number.isSafeInteger(result.invalidated_submissions) || result.invalidated_submissions < 0 || result.invalidated_submissions > 1000) throw new IntakeError("Protected roster response invalid.");
+  return result;
 }

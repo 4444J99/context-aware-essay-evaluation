@@ -13,15 +13,15 @@ client-supplied essay/filename/name/identifier list, arbitrary PDF parser, model
 Run the existing administrator migration command before starting the runtime. Migration 001 is
 unchanged; 002 adds forced-RLS intake_submissions and append-only-by-runtime intake_events.
 The migrator verifies the full existing checksum prefix and applies pending revisions in one
-transaction. Startup now requires all three revisions and all ten forced-RLS tables. Never edit the
+transaction. Startup now requires all four revisions and all eleven forced-RLS tables. Never edit the
 001 checksum to upgrade. Empty-schema rollback removes 002 before 001 and still refuses populated
 schemas; this is rehearsal, not deletion of classroom records.
 
 In addition to existing runtime grants, an administrator grants:
 
 ```sql
-GRANT SELECT, INSERT ON intake_submissions, intake_events, assignments, assignment_enrollments TO edu_api;
-GRANT UPDATE ON intake_submissions TO edu_api;
+GRANT SELECT, INSERT ON intake_submissions, intake_events, assignments, assignment_enrollments, assignment_roster_versions TO edu_api;
+GRANT UPDATE ON intake_submissions, assignments, assignment_enrollments TO edu_api;
 ```
 
 Do not grant event UPDATE/DELETE, table ownership or RLS bypass. Both tables use composite
@@ -98,7 +98,7 @@ P1/P2 blockers stay tracked, with no unchanged bootstrap/CI rerun in this slice.
 Migration 003 adds instructor/course-scoped assignments and immutable expected-enrollment
 snapshots from an authorized section. Creating an assignment requires a nonempty roster of at
 most 1,000 enrollments. The synthetic route accepts only the fixed fictional assignment label.
-Later enrollment changes do not silently change the denominator; roster revision is future work.
+Later enrollment changes do not silently change the denominator; an explicit versioned roster update is required.
 The bounded workspace fails closed above 1,000 rows in any collection rather than reporting
 partial coverage. Coverage means an active mapped document exists, not privacy or grading approval.
 
@@ -114,3 +114,27 @@ Mapping clears only assignment/enrollment holds. Exclusion and matching never cl
 parser, route, synthetic-only, or release qualification holds. Excluded records cannot be privacy
 approved. The protected dashboard exposes assignment creation, queue, coverage, matching and
 exclusion/restoration separately from the in-memory preview.
+
+
+## Versioned roster updates
+
+Migration 004 preserves revision-zero snapshots for existing assignments. Each authorized roster
+update includes the expected roster generation and an explicit list of up to 1,000 unique
+same-section enrollment IDs (including an explicitly empty roster). Stale, duplicate or
+out-of-section requests fail before mutation. Earlier snapshots remain readable through the
+protected roster history endpoint (latest 100 versions with an explicit older-history flag).
+The serving role can insert but cannot update/delete history rows.
+
+Membership rows are retained for source/mapping FK integrity, with an active flag determining
+current coverage. Roster updates lock and invalidate all matched documents, including excluded
+ones: each advances its review generation, clears processed text, and records the roster version
+in encrypted audit. Removed matches retain their assignment/enrollment and receive
+`roster_membership_removed`; a subsequent privacy decision cannot clear this hold. Re-adding a
+member clears that hold but still requires fresh privacy review. A new explicit mapping can
+resolve the hold only to an active expected enrollment. Roster metadata, snapshots, intake
+invalidation and audit events commit together. Failed publication may leave only orphan ciphertext,
+which stays owned by the existing retention/reconciliation tranche.
+
+The protected dashboard shows same-section enrollment checkboxes and records a new roster
+version explicitly. Coverage and intake generations reload after success; conflicts never retry
+writes automatically. PDF/OCR, parser, route and release qualification are unchanged.

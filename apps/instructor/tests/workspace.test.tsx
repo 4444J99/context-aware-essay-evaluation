@@ -181,6 +181,11 @@ test("protected dashboard persists a fixture and submits explicit passage decisi
     if (url === "/v1/session") return Response.json(session);
     if (url === "/v1/courses") return Response.json({ items: [{ id, term_id: id, title: "Protected synthetic course" }], next_cursor: null });
     if (url === "/auth/session") return Response.json({ product: "edu", csrf_token: "synthetic-csrf-value-000000000" });
+    if (url.endsWith("/intake-workspace")) return Response.json({ assignments: [{ id, section_id: id, label: "Fictional assignment", roster_generation: 0 }], sections: [{ id, label: "A" }], enrollments: [{ id, section_id: id }], expected: [{ assignment_id: id, enrollment_id: id }], missing: [], submissions: [{ ...protectedView, review_generation: generation }] });
+    if (url.endsWith("/roster")) {
+      writes++; const body = JSON.parse(options?.body as string); assert.equal(body.expected_generation, 0); assert.deepEqual(body.enrollment_ids, []);
+      return Response.json({ id, roster_generation: 1, invalidated_submissions: 1 });
+    }
     if (options?.method === "POST") {
       assert.equal((options.headers as Record<string, string>)["X-CSRF-Token"], "synthetic-csrf-value-000000000"); writes++;
       if (url.endsWith("/review")) { assert.equal(JSON.parse(options.body as string).decisions["1"], "redact"); generation = 1; }
@@ -199,6 +204,14 @@ test("protected dashboard persists a fixture and submits explicit passage decisi
     await click("Record version-bound review");
     assert.equal(writes, 2); assert.ok(container.textContent?.includes("privacy_reviewed"));
     assert.ok(container.textContent?.includes("route unqualified")); assert.ok(button("Record version-bound review").disabled);
+    await click("Load protected assignment and exception queue");
+    const assignmentChoice = [...container.querySelectorAll("label")].find(label => label.textContent?.startsWith("Assignment"))!.querySelector("select")!;
+    await act(async () => { assignmentChoice.value = id; assignmentChoice.dispatchEvent(new dom.window.Event("change", { bubbles: true })); });
+    const member = container.querySelector<HTMLInputElement>('input[type="checkbox"]')!;
+    assert.ok(member.checked);
+    await act(async () => { member.click(); });
+    await click("Record new roster version");
+    assert.equal(writes, 3); assert.ok(container.textContent?.includes("New roster version recorded"));
   } finally { await act(async () => root.unmount()); globalThis.fetch = previous; dom.window.close(); }
 });
 
@@ -215,4 +228,18 @@ test("protected resolution binds generation and rejects malformed mapping metada
   assert.equal(writes, 1);
   await assert.rejects(readWorkspace(id, signal, (async () => Response.json({ assignments: [], sections: [], expected: [{ assignment_id: "bad", enrollment_id: id }], missing: [], submissions: [] })) as typeof fetch), IntakeError);
   await assert.rejects(readReview(id, id, signal, (async () => Response.json({ ...protectedView, assignment_id: id })) as typeof fetch), IntakeError);
+});
+
+test("roster adapter sends explicit members and generation without retrying stale updates", async () => {
+  const { updateRoster } = await import("../lib/protected-intake"); let writes = 0;
+  const transport = (async (path: string | URL | Request, options?: RequestInit) => {
+    if (String(path) === "/auth/session") return Response.json({ product: "edu", csrf_token: "synthetic-csrf-value-000000000" });
+    writes++; const body = JSON.parse(options?.body as string);
+    assert.equal(body.expected_generation, 3); assert.deepEqual(body.enrollment_ids, []);
+    return Response.json({}, { status: 409 });
+  }) as typeof fetch;
+  await assert.rejects(updateRoster(id, id, 3, [], new AbortController().signal, transport), IntakeError);
+  assert.equal(writes, 1);
+  await assert.rejects(updateRoster(id, id, 3, [id,id], new AbortController().signal, transport), IntakeError);
+  assert.equal(writes, 1);
 });

@@ -19,6 +19,7 @@ class MemoryRepository:
         self.owner, self.course = owner or uuid4(), course or uuid4()
         self.rows, self.events = {}, []
         self.members = set()
+        self.assignment = None; self.roster_generation = 0; self.history = []
 
     def require_course(self):
         pass
@@ -35,6 +36,19 @@ class MemoryRepository:
 
     def review(self, row):
         self.rows[str(row["id"])] = deepcopy(row)
+
+    def roster_assignment(self, assignment):
+        return {"section_id": self.course, "roster_generation": self.roster_generation} if assignment == self.assignment else None
+
+    def section_members(self, section):
+        return {str(e) for _, e in self.members} | getattr(self, "available", set())
+
+    def assignment_submissions(self, assignment):
+        return [deepcopy(row) for row in self.rows.values() if row["assignment_id"] == assignment]
+
+    def replace_roster(self, assignment, generation, members):
+        self.roster_generation = generation; self.history.append(tuple(members))
+        self.members = {(assignment, member) for member in members}
 
     def expected(self, assignment, enrollment):
         return (assignment, enrollment) in self.members
@@ -252,7 +266,46 @@ def test_postgres_protected_mapping_roster_and_rls(database, signing, service):
         assert client.post(path, headers=a, json=body).status_code == 409
         workspace = client.get(base + "/intake-workspace", headers=a).json()
         assert not workspace["missing"] and len(workspace["expected"]) == 1
+        roster_path = base + f"/assignments/{assignment['id']}/roster"
+        replacement = {"expected_generation": 0, "enrollment_ids": []}
+        assert client.post(roster_path, headers=b, json=replacement).status_code == 404
+        changed = client.post(roster_path, headers=a, json=replacement)
+        assert changed.status_code == 200 and changed.json()["invalidated_submissions"] == 1
+        assert client.post(roster_path, headers=a, json=replacement).status_code == 409
+        history = client.get(roster_path, headers=a).json()
+        assert [r["generation"] for r in history["items"]] == [1,0]
+        held = client.get(base + f"/intake/{first['id']}/review", headers=a).json()
+        assert held["review_generation"] == 2 and "roster_membership_removed" in held["holds"]
+        assert client.post(roster_path, headers=a, json={"expected_generation": 1, "enrollment_ids": [member["id"]]}).status_code == 200
+        with psycopg.connect(admin) as conn:
+            assert conn.execute("SELECT count(*) FROM assignment_roster_versions").fetchone()[0] == 3
         assert client.get(base + "/intake-workspace", headers=b).status_code == 404
         with db.scoped(verifier.issuer, "mapping-b") as (conn, _):
             assert conn.execute("SELECT count(*) AS n FROM assignments").fetchone()["n"] == 0
             assert conn.execute("SELECT count(*) AS n FROM assignment_enrollments").fetchone()["n"] == 0
+            assert conn.execute("SELECT count(*) AS n FROM assignment_roster_versions").fetchone()["n"] == 0
+
+
+def test_roster_updates_preserve_matches_invalidate_review_and_hold_removed_members(service):
+    repo = MemoryRepository(); assignment, enrollment, added = uuid4(), uuid4(), uuid4()
+    repo.assignment = assignment; repo.members.add((assignment, enrollment)); repo.available = {str(added), str(enrollment)}
+    first = service.ingest(repo, uuid4(), "argument")
+    service.resolve(repo, first["id"], first["source_revision"], 0, "mapping", assignment, enrollment)
+    view = service.review_view(repo, first["id"])
+    service.decide(repo, first["id"], first["source_revision"], 1, {p["id"]: "retain" for p in view["passages"]})
+    original = repo.get(first["id"])["original_object"]
+    with pytest.raises(IntakeConflict, match="outside_section"):
+        service.update_roster(repo, assignment, 0, [uuid4()])
+    result = service.update_roster(repo, assignment, 0, [added])
+    assert result["roster_generation"] == 1 and result["invalidated_submissions"] == 1
+    row = repo.get(first["id"])
+    assert row["original_object"] == original and row["content_object"] is None and row["review_generation"] == 3
+    assert row["enrollment_id"] == enrollment and "roster_membership_removed" in row["holds"]
+    assert len(service.workspace(repo)["missing"]) == 1
+    with pytest.raises(IntakeConflict, match="stale"):
+        service.update_roster(repo, assignment, 0, [enrollment])
+    reviewed = service.decide(repo, first["id"], first["source_revision"], 3, {p["id"]: "retain" for p in view["passages"]})
+    assert "roster_membership_removed" in reviewed["holds"]
+    service.update_roster(repo, assignment, 1, [enrollment, added])
+    assert "roster_membership_removed" not in repo.get(first["id"])["holds"]
+    assert repo.get(first["id"])["state"] == "privacy_pending" and len(repo.history) == 2

@@ -38,6 +38,12 @@ class Resolution(BaseModel):
     reason: Literal["duplicate", "wrong_assignment", "withdrawn", "instructor_correction"] | None = None
 
 
+class RosterUpdate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    expected_generation: int = Field(ge=0, le=2_147_483_646)
+    enrollment_ids: list[UUID] = Field(max_length=1000)
+
+
 def install_intake_routes(app, scoped, service):
     @app.exception_handler(IntakeStorageError)
     async def storage_error(request, exc):
@@ -79,3 +85,11 @@ def install_intake_routes(app, scoped, service):
     @app.post("/v1/courses/{course_id}/intake/{submission_id}/resolution")
     def resolve(course_id: UUID, submission_id: UUID, body: Resolution, scope=Depends(scoped, scope="function")):
         return run(scope, course_id, lambda repo: service.resolve(repo, submission_id, body.source_revision, body.expected_generation, body.action, body.assignment_id, body.enrollment_id, body.reason))
+
+    @app.post("/v1/courses/{course_id}/assignments/{assignment_id}/roster")
+    def update_roster(course_id: UUID, assignment_id: UUID, body: RosterUpdate, scope=Depends(scoped, scope="function")):
+        return run(scope, course_id, lambda repo: service.update_roster(repo, assignment_id, body.expected_generation, body.enrollment_ids))
+
+    @app.get("/v1/courses/{course_id}/assignments/{assignment_id}/roster")
+    def roster_history(course_id: UUID, assignment_id: UUID, scope=Depends(scoped, scope="function")):
+        return run(scope, course_id, lambda repo: repo.roster_history(assignment_id))

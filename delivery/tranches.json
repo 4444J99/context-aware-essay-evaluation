@@ -119,7 +119,7 @@
           "acceptance": "Bounded extraction preserves text and paragraph order; scanned, malformed, zip-bomb and ambiguous roster cases hold. Legacy import dry runs report exact source, imported, duplicate and held counts without writing historical student records.",
           "source_review": "docs/legacy-review.md",
           "implementation_pr": "https://github.com/4444J99/context-aware-essay-evaluation/pull/9",
-          "implementation_note": "Protected fixture-only extraction, version-bound passage review, assignment roster snapshots, enrollment mapping and reversible exception decisions connect scoped SQL metadata/audit, separate durable vaults and dashboard controls. SQL migration/transaction/RLS, HTTPS browser, PDF/OCR/parser and real-data qualification remain pending."
+          "implementation_note": "Protected fixture-only extraction, version-bound passage review, versioned assignment roster snapshots, enrollment mapping and reversible exception decisions connect scoped SQL metadata/audit, separate durable vaults and dashboard controls. SQL migration/transaction/RLS, HTTPS browser, PDF/OCR/parser and real-data qualification remain pending."
         },
         {
           "id": "T2.2",
@@ -131,7 +131,7 @@
           "status": "in_progress",
           "acceptance": "Direct identifiers and contextual disclosures tested; uncertain cases hold; original passage mapping survives redactions.",
           "implementation_pr": "https://github.com/4444J99/context-aware-essay-evaluation/pull/9",
-          "implementation_note": "Protected fixture-only extraction, version-bound passage review, assignment roster snapshots, enrollment mapping and reversible exception decisions connect scoped SQL metadata/audit, separate durable vaults and dashboard controls. SQL migration/transaction/RLS, HTTPS browser, PDF/OCR/parser and real-data qualification remain pending."
+          "implementation_note": "Protected fixture-only extraction, version-bound passage review, versioned assignment roster snapshots, enrollment mapping and reversible exception decisions connect scoped SQL metadata/audit, separate durable vaults and dashboard controls. SQL migration/transaction/RLS, HTTPS browser, PDF/OCR/parser and real-data qualification remain pending."
         },
         {
           "id": "T2.3",
@@ -144,7 +144,7 @@
           "acceptance": "Instructor imports a whole synthetic class and resolves mismatches without cross-student disclosure. Adapt prior course, assignment, upload and reflection views after removing direct Firebase/Spark/model dependencies; demonstrate the authorized service path.",
           "source_review": "docs/legacy-review.md",
           "implementation_pr": "https://github.com/4444J99/context-aware-essay-evaluation/pull/9",
-          "implementation_note": "Protected fixture-only extraction, version-bound passage review, assignment roster snapshots, enrollment mapping and reversible exception decisions connect scoped SQL metadata/audit, separate durable vaults and dashboard controls. SQL migration/transaction/RLS, HTTPS browser, PDF/OCR/parser and real-data qualification remain pending."
+          "implementation_note": "Protected fixture-only extraction, version-bound passage review, versioned assignment roster snapshots, enrollment mapping and reversible exception decisions connect scoped SQL metadata/audit, separate durable vaults and dashboard controls. SQL migration/transaction/RLS, HTTPS browser, PDF/OCR/parser and real-data qualification remain pending."
         }
       ],
       "issue_url": "https://github.com/4444J99/context-aware-essay-evaluation/issues/3",

@@ -66,7 +66,7 @@ class SqlIntakeRepository:
         self.review(row)
 
     def expected(self, assignment, enrollment):
-        return self.conn.execute("SELECT enrollment_id FROM assignment_enrollments WHERE assignment_id=%s AND enrollment_id=%s AND course_id=%s AND instructor_id=%s", (assignment, enrollment, self.course, self.owner)).fetchone() is not None
+        return self.conn.execute("SELECT enrollment_id FROM assignment_enrollments WHERE assignment_id=%s AND enrollment_id=%s AND course_id=%s AND instructor_id=%s AND active", (assignment, enrollment, self.course, self.owner)).fetchone() is not None
 
     def occupied(self, assignment, enrollment, submission):
         return self.conn.execute("SELECT id FROM intake_submissions WHERE assignment_id=%s AND enrollment_id=%s AND id<>%s AND NOT excluded AND course_id=%s AND instructor_id=%s", (assignment, enrollment, submission, self.course, self.owner)).fetchone() is not None
@@ -75,13 +75,14 @@ class SqlIntakeRepository:
         self.require_course()
         result = {}
         queries = {
-            "assignments": "SELECT id,section_id,label FROM assignments",
-            "expected": "SELECT assignment_id,enrollment_id FROM assignment_enrollments",
+            "assignments": "SELECT id,section_id,label,roster_generation FROM assignments",
+            "expected": "SELECT assignment_id,enrollment_id FROM assignment_enrollments WHERE active",
             "submissions": "SELECT * FROM intake_submissions",
             "sections": "SELECT id,label FROM sections",
+            "enrollments": "SELECT id,section_id FROM enrollments",
         }
         for key, query in queries.items():
-            rows = self.conn.execute(query + " WHERE course_id=%s AND instructor_id=%s ORDER BY " + ("assignment_id,enrollment_id" if key == "expected" else "id") + " LIMIT 1001", (self.course, self.owner)).fetchall()
+            rows = self.conn.execute(query + (" AND" if " WHERE" in query else " WHERE") + " course_id=%s AND instructor_id=%s ORDER BY " + ("assignment_id,enrollment_id" if key == "expected" else "id") + " LIMIT 1001", (self.course, self.owner)).fetchall()
             if len(rows) > 1000:
                 raise IntakeConflict("workspace_size_limit")
             result[key] = rows
@@ -95,10 +96,39 @@ class SqlIntakeRepository:
         if not members or len(members) > 1000:
             raise IntakeConflict("assignment_roster_required_or_too_large")
         assignment = uuid4()
-        self.conn.execute("INSERT INTO assignments VALUES (%s,%s,%s,%s,%s)", (assignment, self.owner, self.course, section, label))
+        self.conn.execute("INSERT INTO assignments(id,instructor_id,course_id,section_id,label) VALUES (%s,%s,%s,%s,%s)", (assignment, self.owner, self.course, section, label))
         for member in members:
-            self.conn.execute("INSERT INTO assignment_enrollments VALUES (%s,%s,%s,%s)", (assignment, member["id"], self.course, self.owner))
-        return {"id": assignment, "section_id": section, "label": label}
+            self.conn.execute("INSERT INTO assignment_enrollments(assignment_id,enrollment_id,course_id,instructor_id) VALUES (%s,%s,%s,%s)", (assignment, member["id"], self.course, self.owner))
+        self.conn.execute("INSERT INTO assignment_roster_versions(assignment_id,course_id,instructor_id,generation,enrollment_ids) VALUES (%s,%s,%s,0,%s)", (assignment, self.course, self.owner, [m["id"] for m in members]))
+        return {"id": assignment, "section_id": section, "label": label, "roster_generation": 0}
+
+    def roster_assignment(self, assignment):
+        return self.conn.execute("SELECT * FROM assignments WHERE id=%s AND course_id=%s AND instructor_id=%s FOR UPDATE", (assignment, self.course, self.owner)).fetchone()
+
+    def section_members(self, section):
+        rows = self.conn.execute("SELECT id FROM enrollments WHERE section_id=%s AND course_id=%s AND instructor_id=%s ORDER BY id LIMIT 1001", (section, self.course, self.owner)).fetchall()
+        if len(rows) > 1000:
+            raise IntakeConflict("roster_size_limit")
+        return {str(row["id"]) for row in rows}
+
+    def replace_roster(self, assignment, generation, members):
+        self.conn.execute("UPDATE assignment_enrollments SET active=false WHERE assignment_id=%s AND course_id=%s AND instructor_id=%s", (assignment, self.course, self.owner))
+        for enrollment in members:
+            self.conn.execute("INSERT INTO assignment_enrollments(assignment_id,enrollment_id,course_id,instructor_id) VALUES (%s,%s,%s,%s) ON CONFLICT(assignment_id,enrollment_id) DO UPDATE SET active=true", (assignment, enrollment, self.course, self.owner))
+        self.conn.execute("UPDATE assignments SET roster_generation=%s WHERE id=%s AND course_id=%s AND instructor_id=%s", (generation, assignment, self.course, self.owner))
+        self.conn.execute("INSERT INTO assignment_roster_versions(assignment_id,course_id,instructor_id,generation,enrollment_ids) VALUES (%s,%s,%s,%s,%s)", (assignment, self.course, self.owner, generation, members))
+
+    def assignment_submissions(self, assignment):
+        rows = self.conn.execute("SELECT * FROM intake_submissions WHERE assignment_id=%s AND course_id=%s AND instructor_id=%s ORDER BY id LIMIT 1001 FOR UPDATE", (assignment, self.course, self.owner)).fetchall()
+        if len(rows) > 1000:
+            raise IntakeConflict("workspace_size_limit")
+        return rows
+
+    def roster_history(self, assignment):
+        if self.roster_assignment(assignment) is None:
+            raise LookupError("record_not_found")
+        rows = self.conn.execute("SELECT generation,enrollment_ids FROM assignment_roster_versions WHERE assignment_id=%s AND course_id=%s AND instructor_id=%s ORDER BY generation DESC LIMIT 101", (assignment, self.course, self.owner)).fetchall()
+        return {"items": rows[:100], "older_versions_available": len(rows) > 100}
 
     def audit(self, row, action, private_object):
         self.conn.execute("INSERT INTO intake_events (id,instructor_id,course_id,submission_id,generation,action,private_object) VALUES (%s,%s,%s,%s,%s,%s,%s)", (uuid4(), self.owner, self.course, row["id"], row["review_generation"], action, private_object))
@@ -198,7 +228,7 @@ class IntakeService:
 
     @staticmethod
     def mapping_holds(row):
-        return [h for h in QUALIFICATION_HOLDS if row["assignment_id"] is None or h not in ("assignment_unresolved", "enrollment_unresolved")] + (["submission_excluded"] if row["excluded"] else [])
+        return (["roster_membership_removed"] if "roster_membership_removed" in row["holds"] else []) + [h for h in QUALIFICATION_HOLDS if row["assignment_id"] is None or h not in ("assignment_unresolved", "enrollment_unresolved")] + (["submission_excluded"] if row["excluded"] else [])
 
     def workspace(self, repo):
         result = repo.workspace()
@@ -218,7 +248,7 @@ class IntakeService:
         if action == "mapping":
             if assignment is None or enrollment is None or not repo.expected(assignment, enrollment):
                 raise IntakeConflict("assignment_enrollment_not_expected")
-            updated.update(assignment_id=assignment, enrollment_id=enrollment)
+            updated.update(assignment_id=assignment, enrollment_id=enrollment, holds=[h for h in row["holds"] if h != "roster_membership_removed"])
         elif action in ("exclude", "restore") and reason in ("duplicate", "wrong_assignment", "withdrawn", "instructor_correction"):
             updated["excluded"] = action == "exclude"
         else:
@@ -226,8 +256,8 @@ class IntakeService:
         if not updated["excluded"] and updated["assignment_id"] and repo.occupied(updated["assignment_id"], updated["enrollment_id"], submission):
             raise IntakeConflict("enrollment_already_covered")
         updated["state"] = "extraction_held" if row["state"] == "extraction_held" else "privacy_pending"
-        extraction = [h for h in row["holds"] if h not in QUALIFICATION_HOLDS and h != "submission_excluded"] if row["state"] == "extraction_held" else ["contextual_review_required"]
-        updated["holds"] = extraction + self.mapping_holds(updated)
+        extraction = [h for h in row["holds"] if h not in QUALIFICATION_HOLDS and h not in ("submission_excluded", "roster_membership_removed")] if row["state"] == "extraction_held" else ["contextual_review_required"]
+        updated["holds"] = list(dict.fromkeys(extraction + self.mapping_holds(updated)))
         audit = {**self.binding(repo, row), "reviewer_id": str(repo.owner), "generation": generation + 1,
                  "action": action, "reason": reason, "assignment_id": str(updated["assignment_id"]) if updated["assignment_id"] else None,
                  "enrollment_id": str(updated["enrollment_id"]) if updated["enrollment_id"] else None}
@@ -235,3 +265,32 @@ class IntakeService:
         repo.save_mapping(updated)
         repo.audit(updated, action, private)
         return self.view(updated)
+
+    def update_roster(self, repo, assignment, generation, members):
+        repo.require_course()
+        current = repo.roster_assignment(assignment)
+        if current is None:
+            raise LookupError("record_not_found")
+        if current["roster_generation"] != generation:
+            raise IntakeConflict("roster_version_stale")
+        if len(members) != len(set(map(str, members))) or not set(map(str, members)) <= repo.section_members(current["section_id"]):
+            raise IntakeConflict("roster_enrollment_outside_section")
+        rows = repo.assignment_submissions(assignment)
+        # Validate and lock the bounded set before publishing any ciphertext or metadata.
+        if any(row["review_generation"] >= 2_147_483_647 for row in rows):
+            raise IntakeConflict("review_generation_exhausted")
+        for row in rows:
+            updated = {**row, "review_generation": row["review_generation"] + 1, "content_object": None}
+            updated["state"] = "extraction_held" if row["state"] == "extraction_held" else "privacy_pending"
+            updated["holds"] = [h for h in row["holds"] if h not in ("roster_membership_removed", "contextual_review_required")]
+            if str(row["enrollment_id"]) not in set(map(str, members)):
+                updated["holds"].append("roster_membership_removed")
+            if updated["state"] != "extraction_held":
+                updated["holds"].append("contextual_review_required")
+            audit = {**self.binding(repo, row), "reviewer_id": str(repo.owner), "generation": updated["review_generation"],
+                     "reason": "assignment_roster_update", "roster_generation": generation + 1}
+            private = self.vault_call(self.identity, "put", str(repo.course), audit)
+            repo.save_mapping(updated)
+            repo.audit(updated, "mapping", private)
+        repo.replace_roster(assignment, generation + 1, members)
+        return {"id": assignment, "roster_generation": generation + 1, "invalidated_submissions": len(rows)}

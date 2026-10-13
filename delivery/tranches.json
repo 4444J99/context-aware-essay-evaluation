@@ -1,0 +1,377 @@
+{
+  "schema_version": 1,
+  "product": "edu",
+  "component": "essay-evaluation",
+  "repository": "4444J99/context-aware-essay-evaluation",
+  "source_page": "https://chatgpt.com/space/page_e0e6016aa0c48191bfc2cf643a47a9c0",
+  "phase_order": [
+    "P0",
+    "P1",
+    "P2",
+    "P3",
+    "P4",
+    "P5",
+    "P6",
+    "P7"
+  ],
+  "phases": [
+    {
+      "id": "P0",
+      "title": "Program and executable foundation",
+      "depends_on": [],
+      "status": "in_progress",
+      "tranches": [
+        {
+          "id": "T0.1",
+          "title": "Repository, approved plan, delivery graph and edu ownership",
+          "owner": "Program lead",
+          "depends_on": [],
+          "status": "implemented_verified",
+          "acceptance": "Plan provenance, dependency graph, remote issues and PR are published."
+        },
+        {
+          "id": "T0.2",
+          "title": "Synthetic intake and deterministic assessment contracts",
+          "owner": "Application engineering",
+          "depends_on": [
+            "T0.1"
+          ],
+          "status": "implemented_verified",
+          "acceptance": "Synthetic API and privacy, rubric, evidence, retention, encryption tests pass."
+        },
+        {
+          "id": "T0.3",
+          "title": "Reproducible verification and qualification boundaries",
+          "owner": "Quality lead",
+          "depends_on": [
+            "T0.2"
+          ],
+          "status": "implemented_verified",
+          "acceptance": "Clean installation, CI definition, smoke test and explicit unqualified routes exist."
+        }
+      ],
+      "issue_url": "https://github.com/4444J99/context-aware-essay-evaluation/issues/1",
+      "milestone_url": "https://github.com/4444J99/context-aware-essay-evaluation/milestone/1",
+      "implementation_pr": "https://github.com/4444J99/context-aware-essay-evaluation/pull/9"
+    },
+    {
+      "id": "P1",
+      "title": "Protected hosted foundation",
+      "depends_on": [
+        "P0"
+      ],
+      "status": "in_progress",
+      "tranches": [
+        {
+          "id": "T1.1",
+          "title": "PostgreSQL schema, migrations and scoped authorization",
+          "owner": "Platform engineering",
+          "depends_on": [
+            "T0.3"
+          ],
+          "status": "in_progress",
+          "acceptance": "Instructor, term, course, section and enrollment models survive migrate/rollback tests; cross-scope access is denied. Legacy course/realm, assignment/quest and submission references are scoped mappings; client IDs or roles grant no authority.",
+          "source_review": "docs/legacy-review.md",
+          "implementation_pr": "https://github.com/4444J99/context-aware-essay-evaluation/pull/9"
+        },
+        {
+          "id": "T1.2",
+          "title": "OIDC MFA, object vault and separate identity keys",
+          "owner": "Security engineering",
+          "depends_on": [
+            "T1.1"
+          ],
+          "status": "in_progress",
+          "acceptance": "Private login works; content worker cannot decrypt identity; backup restore is demonstrated.",
+          "implementation_pr": "https://github.com/4444J99/context-aware-essay-evaluation/pull/9",
+          "implementation_note": "Filesystem envelope vault and mocked OIDC/PKCE browser sessions implemented; hosted KMS isolation, live issuer and PostgreSQL integration qualification pending."
+        },
+        {
+          "id": "T1.3",
+          "title": "Hosted staging, secrets and operational controls",
+          "owner": "Platform engineering",
+          "depends_on": [
+            "T1.2"
+          ],
+          "status": "planned",
+          "acceptance": "Synthetic staging smoke passes; budgets, logs, key rotation and rollback have executable checks."
+        }
+      ],
+      "issue_url": "https://github.com/4444J99/context-aware-essay-evaluation/issues/2",
+      "milestone_url": "https://github.com/4444J99/context-aware-essay-evaluation/milestone/2"
+    },
+    {
+      "id": "P2",
+      "title": "Class ingestion and privacy review",
+      "depends_on": [
+        "P1"
+      ],
+      "status": "in_progress",
+      "tranches": [
+        {
+          "id": "T2.1",
+          "title": "DOCX PDF TXT ZIP and roster ingestion",
+          "owner": "Application engineering",
+          "depends_on": [
+            "T1.3"
+          ],
+          "status": "in_progress",
+          "acceptance": "Bounded extraction preserves text and paragraph order; scanned, malformed, zip-bomb and ambiguous roster cases hold. Legacy import dry runs report exact source, imported, duplicate and held counts without writing historical student records.",
+          "source_review": "docs/legacy-review.md",
+          "implementation_pr": "https://github.com/4444J99/context-aware-essay-evaluation/pull/9",
+          "implementation_note": "Protected fixture-only extraction, version-bound passage review, versioned assignment roster snapshots, enrollment mapping and reversible exception decisions connect scoped SQL metadata/audit, separate durable vaults and dashboard controls. SQL migration/transaction/RLS, HTTPS browser, PDF/OCR/parser and real-data qualification remain pending."
+        },
+        {
+          "id": "T2.2",
+          "title": "Contextual de-identification and passage mapping",
+          "owner": "Privacy engineering",
+          "depends_on": [
+            "T2.1"
+          ],
+          "status": "in_progress",
+          "acceptance": "Direct identifiers and contextual disclosures tested; uncertain cases hold; original passage mapping survives redactions.",
+          "implementation_pr": "https://github.com/4444J99/context-aware-essay-evaluation/pull/9",
+          "implementation_note": "Protected fixture-only extraction, version-bound passage review, versioned assignment roster snapshots, enrollment mapping and reversible exception decisions connect scoped SQL metadata/audit, separate durable vaults and dashboard controls. SQL migration/transaction/RLS, HTTPS browser, PDF/OCR/parser and real-data qualification remain pending."
+        },
+        {
+          "id": "T2.3",
+          "title": "Next.js intake workspace and exception resolution",
+          "owner": "Product engineering",
+          "depends_on": [
+            "T2.2"
+          ],
+          "status": "in_progress",
+          "acceptance": "Instructor imports a whole synthetic class and resolves mismatches without cross-student disclosure. Adapt prior course, assignment, upload and reflection views after removing direct Firebase/Spark/model dependencies; demonstrate the authorized service path.",
+          "source_review": "docs/legacy-review.md",
+          "implementation_pr": "https://github.com/4444J99/context-aware-essay-evaluation/pull/9",
+          "implementation_note": "Protected fixture-only extraction, version-bound passage review, versioned assignment roster snapshots, enrollment mapping and reversible exception decisions connect scoped SQL metadata/audit, separate durable vaults and dashboard controls. SQL migration/transaction/RLS, HTTPS browser, PDF/OCR/parser and real-data qualification remain pending."
+        }
+      ],
+      "issue_url": "https://github.com/4444J99/context-aware-essay-evaluation/issues/3",
+      "milestone_url": "https://github.com/4444J99/context-aware-essay-evaluation/milestone/3"
+    },
+    {
+      "id": "P3",
+      "title": "Rubric evaluation and exports",
+      "depends_on": [
+        "P2"
+      ],
+      "status": "planned",
+      "tranches": [
+        {
+          "id": "T3.1",
+          "title": "Versioned rubric setup and assessment provider contract",
+          "owner": "Assessment engineering",
+          "depends_on": [
+            "T2.3"
+          ],
+          "status": "planned",
+          "acceptance": "Instructor activates verified criteria; exact versions govern jobs; full text fits or holds; arithmetic is deterministic. Teacher Dashboard level-point, Aetheria maxPoints and Aetheria weighted-level formats import as inactive drafts; labels and provenance survive; ambiguous totals or weights hold.",
+          "source_review": "docs/legacy-review.md"
+        },
+        {
+          "id": "T3.2",
+          "title": "Evidence-grounded feedback and release validation",
+          "owner": "Assessment engineering",
+          "depends_on": [
+            "T3.1"
+          ],
+          "status": "planned",
+          "acceptance": "Unsupported quotes, conflicting feedback, prompt injection and unqualified routes cannot yield released grades. Instructor snippet insertion retains evidence obligations; reused templates cannot imply unsupported student-specific observations.",
+          "source_review": "docs/legacy-review.md"
+        },
+        {
+          "id": "T3.3",
+          "title": "Review overrides and versioned export packages",
+          "owner": "Product engineering",
+          "depends_on": [
+            "T3.2"
+          ],
+          "status": "planned",
+          "acceptance": "Original/feedback side-by-side review works; overrides persist; export contains only eligible student-result pairs. Preserve snippet edits and standards-mastery reporting; percentage conversion requires an explicit verified policy. Historical grades never become newly qualified results.",
+          "source_review": "docs/legacy-review.md"
+        }
+      ],
+      "issue_url": "https://github.com/4444J99/context-aware-essay-evaluation/issues/4",
+      "milestone_url": "https://github.com/4444J99/context-aware-essay-evaluation/milestone/4"
+    },
+    {
+      "id": "P4",
+      "title": "Semester and class context",
+      "depends_on": [
+        "P3"
+      ],
+      "status": "planned",
+      "tranches": [
+        {
+          "id": "T4.1",
+          "title": "Student learning record and revision linkage",
+          "owner": "Learning engineering",
+          "depends_on": [
+            "T3.3"
+          ],
+          "status": "planned",
+          "acceptance": "History claims reference actual prior work; corrections invalidate derived summaries; no cross-course links. Optional student reflections retain provenance and affect feedback only unless the activated rubric explicitly assesses them.",
+          "source_review": "docs/legacy-review.md"
+        },
+        {
+          "id": "T4.2",
+          "title": "Section snapshots and instructor teaching insights",
+          "owner": "Learning engineering",
+          "depends_on": [
+            "T4.1"
+          ],
+          "status": "planned",
+          "acceptance": "Coverage denominator is explicit; classmates' identities and raw essays are absent from personal feedback. All assignment entries, including missing and held work, are accounted for; first-five sampling and snippet usage are never presented as whole-class coverage.",
+          "source_review": "docs/legacy-review.md"
+        },
+        {
+          "id": "T4.3",
+          "title": "Personalization separated from grading",
+          "owner": "Assessment engineering",
+          "depends_on": [
+            "T4.2"
+          ],
+          "status": "planned",
+          "acceptance": "Cohort/history changes cannot alter fixed scoring inputs; progress and revision priorities remain evidence-grounded."
+        }
+      ],
+      "issue_url": "https://github.com/4444J99/context-aware-essay-evaluation/issues/5",
+      "milestone_url": "https://github.com/4444J99/context-aware-essay-evaluation/milestone/5"
+    },
+    {
+      "id": "P5",
+      "title": "Processing routes and recovery",
+      "depends_on": [
+        "P3"
+      ],
+      "status": "planned",
+      "tranches": [
+        {
+          "id": "T5.1",
+          "title": "Permitted cloud route and usage accounting",
+          "owner": "Platform engineering",
+          "depends_on": [
+            "T3.3"
+          ],
+          "status": "planned",
+          "acceptance": "Only scrubbed authorized payloads leave; provider policy, spend caps, deadlines and request receipts are enforced. Adapted clients cannot call models directly; unavailable static/demo providers produce typed holds, not feedback, and storage/provider fallback remains explicit.",
+          "source_review": "docs/legacy-review.md"
+        },
+        {
+          "id": "T5.2",
+          "title": "Mac companion with outbound leases",
+          "owner": "Platform engineering",
+          "depends_on": [
+            "T5.1"
+          ],
+          "status": "planned",
+          "acceptance": "Assigned jobs run locally; expired credentials fail; offline machine leaves jobs waiting; no cloud fallback."
+        },
+        {
+          "id": "T5.3",
+          "title": "Idempotency, resumable jobs and cancellation",
+          "owner": "Reliability engineering",
+          "depends_on": [
+            "T5.2"
+          ],
+          "status": "planned",
+          "acceptance": "Injected crashes resume completed stages without duplicate exports; uncertain provider charging is reconciled without blind replay."
+        }
+      ],
+      "issue_url": "https://github.com/4444J99/context-aware-essay-evaluation/issues/6",
+      "milestone_url": "https://github.com/4444J99/context-aware-essay-evaluation/milestone/6"
+    },
+    {
+      "id": "P6",
+      "title": "Qualification and term lifecycle",
+      "depends_on": [
+        "P4",
+        "P5"
+      ],
+      "status": "planned",
+      "tranches": [
+        {
+          "id": "T6.1",
+          "title": "Held-out grading and feedback benchmark",
+          "owner": "Quality lead",
+          "depends_on": [
+            "T4.3",
+            "T5.3"
+          ],
+          "status": "planned",
+          "acceptance": "At least 50 authorized essays across assignments/sections; score and feedback thresholds pass separately per route."
+        },
+        {
+          "id": "T6.2",
+          "title": "Term cache, vault retention and deletion closure",
+          "owner": "Security engineering",
+          "depends_on": [
+            "T6.1"
+          ],
+          "status": "planned",
+          "acceptance": "All cache modes, term transitions, derived records, exports and backup tombstones pass expiry/restore tests."
+        },
+        {
+          "id": "T6.3",
+          "title": "Operational rehearsal and release decision",
+          "owner": "Release lead",
+          "depends_on": [
+            "T6.2"
+          ],
+          "status": "planned",
+          "acceptance": "Load, isolation, rollback, restore and wrong-student tests pass; unresolved release gates are explicit."
+        }
+      ],
+      "issue_url": "https://github.com/4444J99/context-aware-essay-evaluation/issues/7",
+      "milestone_url": "https://github.com/4444J99/context-aware-essay-evaluation/milestone/7"
+    },
+    {
+      "id": "P7",
+      "title": "Composition pilot and launch",
+      "depends_on": [
+        "P6"
+      ],
+      "status": "planned",
+      "tranches": [
+        {
+          "id": "T7.1",
+          "title": "One-assignment shadow run",
+          "owner": "Product lead",
+          "depends_on": [
+            "T6.3"
+          ],
+          "status": "planned",
+          "acceptance": "Instructor compares every pilot result; no automatic external distribution; documented error and effort measurements."
+        },
+        {
+          "id": "T7.2",
+          "title": "Multiple-section controlled pilot",
+          "owner": "Product lead",
+          "depends_on": [
+            "T7.1"
+          ],
+          "status": "planned",
+          "acceptance": "Qualified routes export full-class results; holds, overrides, costs and turnaround are measured against manifest coverage."
+        },
+        {
+          "id": "T7.3",
+          "title": "Accepted instructor release",
+          "owner": "Release lead",
+          "depends_on": [
+            "T7.2"
+          ],
+          "status": "planned",
+          "acceptance": "Whole-assignment success predicate passes; support/runbooks, recovery owner and next-term setup are demonstrated."
+        }
+      ],
+      "issue_url": "https://github.com/4444J99/context-aware-essay-evaluation/issues/8",
+      "milestone_url": "https://github.com/4444J99/context-aware-essay-evaluation/milestone/8"
+    }
+  ],
+  "parent_product_repository": "4444J99/edu-organism",
+  "parent_owner_issue": "https://github.com/4444J99/edu-organism/issues/55",
+  "workspace_registration_pr": "https://github.com/4444J99/portvs/pull/21",
+  "predecessor_sources": "delivery/sources.json",
+  "integration_addendum": ".codex/plans/2026-10-12-context-aware-essay-evaluation-v2.md"
+}

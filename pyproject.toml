@@ -1,0 +1,30 @@
+[build-system]
+requires = ["hatchling>=1.27,<2"]
+build-backend = "hatchling.build"
+
+[project]
+name = "context-aware-essay-evaluation"
+version = "0.1.0"
+description = "Private rubric-grounded essay evaluation foundation"
+requires-python = ">=3.11"
+dependencies = [
+  "cryptography>=44,<47",
+  "fastapi>=0.121,<1",
+  "uvicorn>=0.34,<1",
+  "psycopg[binary]>=3.2,<4",
+  "PyJWT[crypto]>=2.10,<3",
+  "httpx>=0.28,<1",
+  "defusedxml>=0.7,<1",
+]
+
+[project.optional-dependencies]
+test = ["httpx>=0.28,<1", "pytest>=8,<10"]
+
+[project.scripts]
+essay-evaluation = "essay_evaluation.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/essay_evaluation"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
